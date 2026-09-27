@@ -4,7 +4,7 @@
 
 A table rebuild can preserve every row and pass database integrity checks while dropping the trigger that records payments. SchemaRehearsal runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
 
-Python 3.11 or later. No runtime dependencies, account, network connection, or database server. Install from this source checkout:
+Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.1.0-py3-none-any.whl`. Or install from this source checkout:
 
 ```sh
 python -m venv .venv
