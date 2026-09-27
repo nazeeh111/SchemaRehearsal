@@ -11,3 +11,11 @@ Local evidence from September 27, 2026, macOS arm64, Python 3.14.7 with SQLite 3
 [GitHub CI 36336366399](https://github.com/nazeeh111/SchemaRehearsal/actions/runs/36336366399) passed on source commit `fa99fc8369c731f8135904e04047b47f66e3d111` on Linux with Python 3.11 and 3.14. Each job passed all 26 tests, source compilation, wheel build, and an installed CLI run outside the checkout with broken/repaired/unchanged exits 1/0/0. The final release adds documentation and source-distribution inclusions; runtime code and tests are unchanged. Local testing does not establish production workload coverage, arbitrary database-engine compatibility, malicious-input containment, a hard total memory bound or directory-wide immutability. Source connections are read-only, but SQLite coordination sidecars and concurrent writers are outside the directory-byte guarantee.
 
 The standalone report was inspected in Chrome at desktop and 390-pixel widths. Narrow tables scroll horizontally with a visible hint and keyboard-focusable region. This manual check is not an accessibility certification.
+
+The post-release [duplicate-row walkthrough](walkthrough.md) was executed with
+the downloaded v0.1.0 wheel in an isolated environment with `PYTHONPATH` unset.
+Reordering A/A/B to B/A/A matched (exit 0); replacing one A with B changed
+(exit 1). Both retained three rows, the same distinct SKUs, and passing database
+checks. The recipe verifies exit codes and both observation results. CI now
+also runs this recipe with its installed wheel; that configuration alone is
+not a claim of a passed hosted run.

@@ -27,3 +27,4 @@ jobs:
           python -m venv "$RUNNER_TEMP/installed"
           "$RUNNER_TEMP/installed/bin/python" -m pip install --no-index --no-deps dist/*.whl
           "$RUNNER_TEMP/installed/bin/python" tests/installed_smoke.py
+          "$RUNNER_TEMP/installed/bin/python" examples/duplicate_rows.py "$RUNNER_TEMP/receipt-demo"

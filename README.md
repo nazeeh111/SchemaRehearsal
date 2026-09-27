@@ -32,6 +32,9 @@ The original synthetic fixture has 20 accounts and 200 orders. Both migrations k
 
 ## Describe the behavior you depend on
 
+The [runnable walkthrough](docs/walkthrough.md) demonstrates how to ignore row
+order without missing changed duplicates, then shows how to extend a workload.
+
 A suite is a JSON file. Each named scenario has mutation `steps`, followed by read-only `observations`:
 
 ```json
