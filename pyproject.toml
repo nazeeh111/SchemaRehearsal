@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "schema-rehearsal"
+version = "0.1.0"
+description = "Rehearse SQLite migrations against repeatable application behaviors."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "nazeeh111"}]
+dependencies = []
+
+[project.scripts]
+schema-rehearsal = "schema_rehearsal.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
