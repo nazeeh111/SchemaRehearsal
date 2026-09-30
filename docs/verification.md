@@ -1,5 +1,34 @@
 # Verification
 
+## Transaction scenarios in 0.2.0
+
+Local evidence from September 29, 2026, macOS arm64, Python 3.14.7 with SQLite 3.50.4:
+
+- The changed implementation passed the existing 26 tests and ten new transaction
+  tests in one 36-test run. A subsequent regression for a migrated commit failure
+  passed with all eleven transaction tests. It confirms equal successful step
+  outcomes can still produce a changed commit, with pending rows rolled back.
+- Coverage includes deferred child-before-parent inserts, deferred-to-immediate
+  constraints, exact expected/unexpected commit failures, commit differences in
+  both directions, `RAISE(ROLLBACK)` and `INSERT OR ROLLBACK`, continued execution
+  after statement-level `ABORT`, skipped steps after transaction rollback,
+  interruption cleanup, blocked manual transaction control, bounded read-only
+  observations, report escaping and value privacy. Source compilation and
+  `git diff --check` passed.
+- The 0.2.0 wheel was built offline with the bundled Python 3.12.14,
+  setuptools 84.0.0 and wheel 0.48.0. That exact wheel was installed with
+  `--no-index --no-deps` in a fresh Python 3.14 environment. The
+  [transaction recipe](transactions.md) ran its CLI subprocesses outside the
+  source tree with `PYTHONPATH` unset, imported from `site-packages`, and verified
+  exits 0/1/3/3 for deferred/immediate/autocommit/unexpected-commit results.
+  It also checked the synthetic source bytes stayed unchanged and the failed
+  commit's observation contained no pending child.
+- CI retains Python 3.11 and 3.14 and now invokes this same recipe with its
+  installed wheel. These local results do not establish a hosted CI result or
+  local Python 3.11 coverage for 0.2.0.
+
+## Earlier release evidence
+
 Local evidence from September 27, 2026, macOS arm64, Python 3.14.7 with SQLite 3.50.4:
 
 - 26 standard-library unittest tests passed, covering the application example, main-file/WAL preservation in controlled fixtures, committed WAL capture, independent scenario resets, exact expected constraint outcomes, type/order/duplicate comparisons, source errors, invalid suites, privacy, HTML escaping, output preservation and execution/size/result limits.
