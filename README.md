@@ -4,7 +4,7 @@
 
 A table rebuild can preserve every row and pass database integrity checks while dropping the trigger that records payments. SchemaRehearsal runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
 
-![Actual transaction report: the child insert succeeds before migration and fails after an immediate foreign key is introduced; commit succeeds on both copies, while the linked-child observation changes from one row to zero.](docs/transaction-report.jpg)
+![Actual transaction report: child-before-parent steps and commit succeed on both copies; a missing parent is rejected at commit and rolled back before observations.](docs/transaction-report.jpg)
 
 The [transaction walkthrough](docs/transactions.md) reproduces this report with synthetic data.
 
