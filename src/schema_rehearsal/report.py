@@ -23,6 +23,12 @@ def render_html(report):
             rows.append(
                 f'<tr><th>Step {step["number"]}</th><td>{e(step["before"])}</td><td>{e(step["after"])}</td><td class="{state}">{state}</td></tr>'
             )
+        if "commit" in case:
+            commit = case["commit"]
+            state = "same" if commit["equal"] else "different"
+            rows.append(
+                f'<tr><th>Commit<small>Engine-controlled transaction</small></th><td>{e(commit["before"])}</td><td>{e(commit["after"])}</td><td class="{state}">{state}</td></tr>'
+            )
         for obs in case["observations"]:
             state = "same" if obs["equal"] else "different"
             a = shape(obs["before_rows"], obs["before_columns"])
@@ -56,7 +62,16 @@ def render_html(report):
     )
     diagnostic = ""
     if "diagnostic" in report:
-        diagnostic = f'<aside class="diagnostic"><strong>{e(report.get("stage", ""))}</strong><p>{e(report["diagnostic"])}</p><p>{e(report.get("error_code", ""))}</p></aside>'
+        context = ""
+        if "scenario" in report:
+            context += f'<p>Scenario: {e(report["scenario"])}</p>'
+        if "commit" in report:
+            context += f'<p>Baseline commit: {e(report["commit"]["before"])} · expected {e(report["commit"]["expected"])}</p>'
+            context += "<ul>" + "".join(
+                f'<li>Step {e(step["number"])}: {e(step["actual"])} · expected {e(step["expected"])}</li>'
+                for step in report.get("steps", [])
+            ) + "</ul>"
+        diagnostic = f'<aside class="diagnostic"><strong>{e(report.get("stage", ""))}</strong><p>{e(report["diagnostic"])}</p>{context}<p>{e(report.get("error_code", ""))}</p></aside>'
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>SchemaRehearsal · {e(title)}</title>
 <style>

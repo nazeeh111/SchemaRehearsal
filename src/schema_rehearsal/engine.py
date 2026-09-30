@@ -109,7 +109,16 @@ def validate_suite(suite, limits):
     )
     names = set()
     for case in cases:
-        _keys(case, ["name", "steps", "observations"])
+        _keys(case, ["name", "steps", "observations"], ["transaction", "expect_commit_error"])
+        if "transaction" in case:
+            _require(case["transaction"] == "commit", "Transaction mode must be commit.")
+        if "expect_commit_error" in case:
+            _require(
+                case.get("transaction") == "commit"
+                and isinstance(case["expect_commit_error"], str)
+                and case["expect_commit_error"] in CONSTRAINT_NAMES,
+                "Expected commit errors require commit mode and an SQLite constraint code.",
+            )
         _name(case["name"])
         _require(case["name"] not in names, "Scenario names must be unique.")
         names.add(case["name"])
@@ -366,18 +375,49 @@ def _schema(db):
 
 def _scenario(db, case, limits, deadline):
     outcomes, observations = [], []
-    for step in case["steps"]:
+    transactional = case.get("transaction") == "commit"
+    commit = None
+    if transactional:
         _deadline(deadline)
-        _guard(db, deadline, "step")
-        try:
-            # Consume RETURNING/SELECT output as well so steps cannot evade result bounds.
-            _rows(db.execute(step["sql"], step.get("parameters", [])), limits, deadline)
-            outcome = "ok"
-        except sqlite3.IntegrityError as error:
-            outcome = error.sqlite_errorname
-        finally:
-            _unguard(db)
-        outcomes.append(outcome)
+        db.execute("BEGIN")
+    try:
+        for step in case["steps"]:
+            # ROLLBACK conflict policy or a trigger may end the whole transaction.
+            # Never execute the remaining application steps in autocommit mode.
+            if transactional and not db.in_transaction:
+                outcomes.append("not_run")
+                continue
+            _deadline(deadline)
+            _guard(db, deadline, "step")
+            try:
+                # Consume RETURNING/SELECT output so steps retain result bounds.
+                _rows(db.execute(step["sql"], step.get("parameters", [])), limits, deadline)
+                outcome = "ok"
+            except sqlite3.IntegrityError as error:
+                outcome = error.sqlite_errorname
+            finally:
+                _unguard(db)
+            outcomes.append(outcome)
+        if transactional:
+            if not db.in_transaction:
+                commit = "not_attempted"
+            else:
+                _deadline(deadline)
+                db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+                try:
+                    # Only this fixed engine statement is trusted; user SQL stays guarded.
+                    db.execute("COMMIT")
+                    commit = "ok"
+                except sqlite3.IntegrityError as error:
+                    commit = error.sqlite_errorname
+                finally:
+                    _unguard(db)
+    finally:
+        # A failed COMMIT leaves SQLite in the transaction. Cleanup must not be
+        # interrupted by an expired progress handler or expose pending rows.
+        _unguard(db)
+        if transactional and db.in_transaction:
+            db.execute("ROLLBACK")
     for obs in case["observations"]:
         _guard(db, deadline, "observation")
         try:
@@ -388,7 +428,7 @@ def _scenario(db, case, limits, deadline):
             )
         finally:
             _unguard(db)
-    return outcomes, observations
+    return outcomes, observations, commit
 
 
 def rehearse(
@@ -510,23 +550,36 @@ def rehearse(
                     _backup(snapshot, left, limits, deadline)
                     _backup(migrated, right, limits, deadline)
                     stage = "baseline_scenario"
-                    baseline_outcomes, baseline_rows = _scenario(
+                    baseline_outcomes, baseline_rows, baseline_commit = _scenario(
                         left, case, limits, deadline
                     )
                     expected = [
                         step.get("expect_error", "ok") for step in case["steps"]
                     ]
-                    if baseline_outcomes != expected:
+                    expected_commit = case.get("expect_commit_error", "ok")
+                    transactional = case.get("transaction") == "commit"
+                    if baseline_outcomes != expected or (transactional and baseline_commit != expected_commit):
                         report.update(
                             status="invalid_baseline",
                             exit_code=3,
                             stage=stage,
-                            diagnostic="Baseline did not meet declared step outcomes.",
+                            diagnostic=(
+                                "Baseline did not meet declared step or commit outcomes."
+                                if transactional
+                                else "Baseline did not meet declared step outcomes."
+                            ),
                             scenario=case["name"],
                         )
+                        if transactional:
+                            report["transaction"] = "commit"
+                            report["commit"] = {"before": baseline_commit, "expected": expected_commit}
+                            report["steps"] = [
+                                {"number": i + 1, "actual": actual, "expected": wanted}
+                                for i, (actual, wanted) in enumerate(zip(baseline_outcomes, expected))
+                            ]
                         return report
                     stage = "migrated_scenario"
-                    migrated_outcomes, migrated_rows = _scenario(
+                    migrated_outcomes, migrated_rows, migrated_commit = _scenario(
                         right, case, limits, deadline
                     )
                     case_report = {
@@ -539,6 +592,13 @@ def rehearse(
                         ],
                         "observations": [],
                     }
+                    if transactional:
+                        case_report["transaction"] = "commit"
+                        case_report["commit"] = {
+                            "before": baseline_commit,
+                            "after": migrated_commit,
+                            "equal": baseline_commit == migrated_commit,
+                        }
                     for obs, (cols_a, a), (cols_b, b) in zip(
                         case["observations"], baseline_rows, migrated_rows
                     ):
@@ -562,6 +622,7 @@ def rehearse(
                         if all(
                             x["equal"]
                             for x in case_report["steps"] + case_report["observations"]
+                            + ([case_report["commit"]] if transactional else [])
                         )
                         else "changed"
                     )
