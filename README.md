@@ -8,7 +8,7 @@ A table rebuild can preserve every row and pass database integrity checks while 
 
 The [transaction walkthrough](docs/transactions.md) reproduces this report with synthetic data.
 
-Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.2.0-py3-none-any.whl`. Or install from this source checkout:
+Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.3.0-py3-none-any.whl`. Or install from this source checkout:
 
 ```sh
 python -m venv .venv
@@ -33,6 +33,40 @@ schema-rehearsal check --database example/orders.sqlite \
 Open `broken-report/report.html` in your browser, or read `report.json` in CI. Every output directory must be new; existing files are never replaced. The example command also requires a new directory, with an existing parent. An error can leave a partial new directory for inspection; choose a new path for a retry.
 
 The original synthetic fixture has 20 accounts and 200 orders. Both migrations keep those rows and pass integrity and foreign-key checks. Paying 17 orders produces 17 audit records before migration, **zero** after the broken migration, and 17 after the repaired one. A second scenario checks an exact constraint failure; a third demonstrates that scenarios start independently. No production database is included.
+
+## Catch a regression that a later migration repairs
+
+A final-state check can match while an earlier migration checkpoint breaks a
+workflow. `sequence` applies explicitly ordered migrations on a single cumulative
+copy and runs the same suite after each committed checkpoint. Every checkpoint
+compares with **one frozen starting snapshot**, even if another writer changes
+the source during the rehearsal.
+
+```sh
+schema-rehearsal sequence --database app.sqlite --suite suite.json \
+  --migration 001.sql --migration 002.sql --migration 003.sql \
+  --output sequence-report
+```
+
+The [runnable sequence example](docs/sequences.md) demonstrates a middle migration
+that loses an audit trigger and a final migration that restores it. Checking only
+the final state returns `matched`; the sequence returns exit 1, with checkpoint
+results `matched → changed → matched` and `first_changed: 2`. Its self-contained
+HTML report lets you inspect each checkpoint's witnesses and schema differences.
+
+Changes keep the aggregate result `changed` even after repair. Execution errors
+and invalid baselines stop the sequence and mark later checkpoints `not_run`;
+their exits 2 or 3 take precedence over a previously observed change. `first_changed`
+is the earliest observed difference, not a causal proof. Reports use ordinal
+checkpoint numbers and input hashes, omitting migration filenames and SQL.
+
+Up to eight migrations, 1 MiB of combined migration SQL and one shared 30-second
+cooperative budget are supported. Each file must end outside a transaction;
+transactions cannot span files. Foreign-key enforcement and recursive triggers
+are restored after each checkpoint, so a later migration needing foreign keys
+disabled must explicitly disable them. The same workloads must be valid against
+the starting schema and relevant checkpoints. New application versions,
+concurrent deployments and migration-runner bookkeeping are not modeled.
 
 ## Describe the behavior you depend on
 

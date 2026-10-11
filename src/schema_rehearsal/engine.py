@@ -109,9 +109,15 @@ def validate_suite(suite, limits):
     )
     names = set()
     for case in cases:
-        _keys(case, ["name", "steps", "observations"], ["transaction", "expect_commit_error"])
+        _keys(
+            case,
+            ["name", "steps", "observations"],
+            ["transaction", "expect_commit_error"],
+        )
         if "transaction" in case:
-            _require(case["transaction"] == "commit", "Transaction mode must be commit.")
+            _require(
+                case["transaction"] == "commit", "Transaction mode must be commit."
+            )
         if "expect_commit_error" in case:
             _require(
                 case.get("transaction") == "commit"
@@ -391,7 +397,11 @@ def _scenario(db, case, limits, deadline):
             _guard(db, deadline, "step")
             try:
                 # Consume RETURNING/SELECT output so steps retain result bounds.
-                _rows(db.execute(step["sql"], step.get("parameters", [])), limits, deadline)
+                _rows(
+                    db.execute(step["sql"], step.get("parameters", [])),
+                    limits,
+                    deadline,
+                )
                 outcome = "ok"
             except sqlite3.IntegrityError as error:
                 outcome = error.sqlite_errorname
@@ -431,9 +441,7 @@ def _scenario(db, case, limits, deadline):
     return outcomes, observations, commit
 
 
-def rehearse(
-    database: Path, migration: str, suite: dict, *, limits: Limits | None = None
-):
+def _rehearse_many(database, migrations, suite, *, limits=None):
     """Return a value-free report. Only explicitly selected database files are read."""
     limits = limits or Limits()
     report = {
@@ -445,14 +453,16 @@ def rehearse(
         "schema_changes": [],
         "scenarios": [],
     }
+    reports = []
     stage = "input"
     try:
         validate_suite(suite, limits)
-        _require(
-            isinstance(migration, str)
-            and 0 < len(migration.encode()) <= limits.input_bytes,
-            "Migration must be nonempty and within the input limit.",
-        )
+        for migration in migrations:
+            _require(
+                isinstance(migration, str)
+                and 0 < len(migration.encode()) <= limits.input_bytes,
+                "Migration must be nonempty and within the input limit.",
+            )
         database = Path(database)
         _require(
             not database.is_symlink() and database.is_file(),
@@ -473,7 +483,7 @@ def rehearse(
                     and sidecar.stat().st_size <= limits.database_bytes,
                     "Database sidecar exceeds limits or is not a regular file.",
                 )
-        report["migration_sha256"] = hashlib.sha256(migration.encode()).hexdigest()
+        report["migration_sha256"] = hashlib.sha256(migrations[0].encode()).hexdigest()
         report["suite_sha256"] = hashlib.sha256(
             json.dumps(suite, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
@@ -507,131 +517,166 @@ def rehearse(
                     stage=stage,
                     diagnostic="Baseline database checks failed.",
                 )
-                return report
+                reports.append(report)
+                return reports
             report["snapshot_sha256"] = hashlib.sha256(snapshot.serialize()).hexdigest()
             before_schema = _schema(snapshot)
             migrated = _connect(":memory:", stack, limits)
             _backup(snapshot, migrated, limits, deadline)
-            stage = "migration"
-            _guard(migrated, deadline, "migration")
-            try:
-                for statement in _statements(migration, deadline):
-                    _deadline(deadline)
-                    _rows(migrated.execute(statement), limits, deadline)
-                _require(
-                    not migrated.in_transaction, "Migration left an open transaction."
+            common = dict(report)
+            for migration in migrations:
+                report = dict(
+                    common,
+                    database_checks={"before": before_check},
+                    schema_changes=[],
+                    scenarios=[],
                 )
-            finally:
-                _unguard(migrated)
-            migrated.execute("PRAGMA foreign_keys=ON")
-            migrated.execute("PRAGMA recursive_triggers=ON")
-            after_check = _checks(migrated, deadline)
-            report["database_checks"]["after"] = after_check
-            _require(all(after_check.values()), "Migrated database checks failed.")
-            after_schema = _schema(migrated)
-            for key in sorted(before_schema.keys() | after_schema.keys()):
-                if before_schema.get(key) != after_schema.get(key):
-                    report["schema_changes"].append(
-                        {
-                            "type": key[0],
-                            "name": key[1],
-                            "change": "added"
-                            if key not in before_schema
-                            else "removed"
-                            if key not in after_schema
-                            else "changed",
-                        }
+                report["migration_sha256"] = hashlib.sha256(
+                    migration.encode()
+                ).hexdigest()
+                stage = "migration"
+                _guard(migrated, deadline, "migration")
+                try:
+                    for statement in _statements(migration, deadline):
+                        _deadline(deadline)
+                        _rows(migrated.execute(statement), limits, deadline)
+                    _require(
+                        not migrated.in_transaction,
+                        "Migration left an open transaction.",
                     )
-            changed = False
-            for case in suite["scenarios"]:
-                with ExitStack() as scenario_stack:
-                    left = _connect(":memory:", scenario_stack, limits)
-                    right = _connect(":memory:", scenario_stack, limits)
-                    _backup(snapshot, left, limits, deadline)
-                    _backup(migrated, right, limits, deadline)
-                    stage = "baseline_scenario"
-                    baseline_outcomes, baseline_rows, baseline_commit = _scenario(
-                        left, case, limits, deadline
-                    )
-                    expected = [
-                        step.get("expect_error", "ok") for step in case["steps"]
-                    ]
-                    expected_commit = case.get("expect_commit_error", "ok")
-                    transactional = case.get("transaction") == "commit"
-                    if baseline_outcomes != expected or (transactional and baseline_commit != expected_commit):
-                        report.update(
-                            status="invalid_baseline",
-                            exit_code=3,
-                            stage=stage,
-                            diagnostic=(
-                                "Baseline did not meet declared step or commit outcomes."
-                                if transactional
-                                else "Baseline did not meet declared step outcomes."
-                            ),
-                            scenario=case["name"],
-                        )
-                        if transactional:
-                            report["transaction"] = "commit"
-                            report["commit"] = {"before": baseline_commit, "expected": expected_commit}
-                            report["steps"] = [
-                                {"number": i + 1, "actual": actual, "expected": wanted}
-                                for i, (actual, wanted) in enumerate(zip(baseline_outcomes, expected))
-                            ]
-                        return report
-                    stage = "migrated_scenario"
-                    migrated_outcomes, migrated_rows, migrated_commit = _scenario(
-                        right, case, limits, deadline
-                    )
-                    case_report = {
-                        "name": case["name"],
-                        "steps": [
-                            {"number": i + 1, "before": a, "after": b, "equal": a == b}
-                            for i, (a, b) in enumerate(
-                                zip(baseline_outcomes, migrated_outcomes)
-                            )
-                        ],
-                        "observations": [],
-                    }
-                    if transactional:
-                        case_report["transaction"] = "commit"
-                        case_report["commit"] = {
-                            "before": baseline_commit,
-                            "after": migrated_commit,
-                            "equal": baseline_commit == migrated_commit,
-                        }
-                    for obs, (cols_a, a), (cols_b, b) in zip(
-                        case["observations"], baseline_rows, migrated_rows
-                    ):
-                        order = obs.get("order", "ordered")
-                        equal = cols_a == cols_b and (
-                            a == b if order == "ordered" else Counter(a) == Counter(b)
-                        )
-                        case_report["observations"].append(
+                finally:
+                    _unguard(migrated)
+                migrated.execute("PRAGMA foreign_keys=ON")
+                migrated.execute("PRAGMA recursive_triggers=ON")
+                after_check = _checks(migrated, deadline)
+                report["database_checks"]["after"] = after_check
+                _require(all(after_check.values()), "Migrated database checks failed.")
+                after_schema = _schema(migrated)
+                for key in sorted(before_schema.keys() | after_schema.keys()):
+                    if before_schema.get(key) != after_schema.get(key):
+                        report["schema_changes"].append(
                             {
-                                "name": obs["name"],
-                                "order": order,
-                                "equal": equal,
-                                "before_rows": len(a),
-                                "after_rows": len(b),
-                                "before_columns": cols_a,
-                                "after_columns": cols_b,
+                                "type": key[0],
+                                "name": key[1],
+                                "change": "added"
+                                if key not in before_schema
+                                else "removed"
+                                if key not in after_schema
+                                else "changed",
                             }
                         )
-                    case_report["status"] = (
-                        "matched"
-                        if all(
-                            x["equal"]
-                            for x in case_report["steps"] + case_report["observations"]
-                            + ([case_report["commit"]] if transactional else [])
+                changed = False
+                for case in suite["scenarios"]:
+                    with ExitStack() as scenario_stack:
+                        left = _connect(":memory:", scenario_stack, limits)
+                        right = _connect(":memory:", scenario_stack, limits)
+                        _backup(snapshot, left, limits, deadline)
+                        _backup(migrated, right, limits, deadline)
+                        stage = "baseline_scenario"
+                        baseline_outcomes, baseline_rows, baseline_commit = _scenario(
+                            left, case, limits, deadline
                         )
-                        else "changed"
-                    )
-                    changed |= case_report["status"] == "changed"
-                    report["scenarios"].append(case_report)
-            report.update(
-                status="changed" if changed else "matched",
-                exit_code=1 if changed else 0,
-            )
+                        expected = [
+                            step.get("expect_error", "ok") for step in case["steps"]
+                        ]
+                        expected_commit = case.get("expect_commit_error", "ok")
+                        transactional = case.get("transaction") == "commit"
+                        if baseline_outcomes != expected or (
+                            transactional and baseline_commit != expected_commit
+                        ):
+                            report.update(
+                                status="invalid_baseline",
+                                exit_code=3,
+                                stage=stage,
+                                diagnostic=(
+                                    "Baseline did not meet declared step or commit outcomes."
+                                    if transactional
+                                    else "Baseline did not meet declared step outcomes."
+                                ),
+                                scenario=case["name"],
+                            )
+                            if transactional:
+                                report["transaction"] = "commit"
+                                report["commit"] = {
+                                    "before": baseline_commit,
+                                    "expected": expected_commit,
+                                }
+                                report["steps"] = [
+                                    {
+                                        "number": i + 1,
+                                        "actual": actual,
+                                        "expected": wanted,
+                                    }
+                                    for i, (actual, wanted) in enumerate(
+                                        zip(baseline_outcomes, expected)
+                                    )
+                                ]
+                            reports.append(report)
+                            return reports
+                        stage = "migrated_scenario"
+                        migrated_outcomes, migrated_rows, migrated_commit = _scenario(
+                            right, case, limits, deadline
+                        )
+                        case_report = {
+                            "name": case["name"],
+                            "steps": [
+                                {
+                                    "number": i + 1,
+                                    "before": a,
+                                    "after": b,
+                                    "equal": a == b,
+                                }
+                                for i, (a, b) in enumerate(
+                                    zip(baseline_outcomes, migrated_outcomes)
+                                )
+                            ],
+                            "observations": [],
+                        }
+                        if transactional:
+                            case_report["transaction"] = "commit"
+                            case_report["commit"] = {
+                                "before": baseline_commit,
+                                "after": migrated_commit,
+                                "equal": baseline_commit == migrated_commit,
+                            }
+                        for obs, (cols_a, a), (cols_b, b) in zip(
+                            case["observations"], baseline_rows, migrated_rows
+                        ):
+                            order = obs.get("order", "ordered")
+                            equal = cols_a == cols_b and (
+                                a == b
+                                if order == "ordered"
+                                else Counter(a) == Counter(b)
+                            )
+                            case_report["observations"].append(
+                                {
+                                    "name": obs["name"],
+                                    "order": order,
+                                    "equal": equal,
+                                    "before_rows": len(a),
+                                    "after_rows": len(b),
+                                    "before_columns": cols_a,
+                                    "after_columns": cols_b,
+                                }
+                            )
+                        case_report["status"] = (
+                            "matched"
+                            if all(
+                                x["equal"]
+                                for x in case_report["steps"]
+                                + case_report["observations"]
+                                + ([case_report["commit"]] if transactional else [])
+                            )
+                            else "changed"
+                        )
+                        changed |= case_report["status"] == "changed"
+                        report["scenarios"].append(case_report)
+                report.update(
+                    status="changed" if changed else "matched",
+                    exit_code=1 if changed else 0,
+                )
+                reports.append(report)
+            return reports
     except RehearsalError as error:
         report.update(stage=stage, diagnostic=str(error))
         if stage in ("baseline", "baseline_scenario"):
@@ -644,4 +689,88 @@ def rehearse(
         )
         if stage in ("baseline", "baseline_scenario"):
             report.update(status="invalid_baseline", exit_code=3)
-    return report
+    reports.append(report)
+    return reports
+
+
+def rehearse(
+    database: Path, migration: str, suite: dict, *, limits: Limits | None = None
+):
+    """Compare one migration with a frozen, read-only source snapshot."""
+    return _rehearse_many(database, [migration], suite, limits=limits)[0]
+
+
+def rehearse_sequence(
+    database: Path, migrations: list[str], suite: dict, *, limits=None
+):
+    """Compare each committed checkpoint with the same original snapshot.
+
+    Input order is explicit. Changes do not stop later checkpoints; an execution
+    error or invalid baseline does. SQL and source paths never enter the report.
+    """
+    limits = limits or Limits()
+    result = {
+        "format": "schema-rehearsal/sequence-report-v1",
+        "sqlite_version": sqlite3.sqlite_version,
+        "status": "error",
+        "exit_code": 2,
+        "first_changed": None,
+        "final_status": "not_run",
+        "checkpoints": [],
+    }
+    try:
+        _require(
+            isinstance(migrations, list) and 1 <= len(migrations) <= 8,
+            "A sequence needs 1–8 explicitly ordered migrations.",
+        )
+        _require(
+            all(isinstance(sql, str) and len(sql.encode()) > 0 for sql in migrations),
+            "Migrations must be nonempty SQL strings.",
+        )
+        _require(
+            sum(len(sql.encode()) for sql in migrations) <= limits.input_bytes,
+            "Combined migrations exceed the input limit.",
+        )
+    except RehearsalError as error:
+        result.update(diagnostic=str(error), stage="input")
+        return result
+    reports = _rehearse_many(database, migrations, suite, limits=limits)
+    result["sequence_sha256"] = hashlib.sha256(
+        json.dumps(
+            [hashlib.sha256(sql.encode()).hexdigest() for sql in migrations],
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    for number, sql in enumerate(migrations, 1):
+        checkpoint = {
+            "number": number,
+            "migration_sha256": hashlib.sha256(sql.encode()).hexdigest(),
+            "status": "not_run",
+        }
+        if number <= len(reports):
+            report = reports[number - 1]
+            checkpoint.update(status=report["status"], report=report)
+            if (
+                any(case["status"] == "changed" for case in report["scenarios"])
+                and result["first_changed"] is None
+            ):
+                result["first_changed"] = number
+        result["checkpoints"].append(checkpoint)
+    result["snapshot_sha256"] = reports[0].get("snapshot_sha256")
+    result["suite_sha256"] = reports[0].get("suite_sha256")
+    result["final_status"] = result["checkpoints"][-1]["status"]
+    last = reports[-1]
+    status = (
+        last["status"]
+        if last["exit_code"] in (2, 3)
+        else "changed"
+        if result["first_changed"]
+        else "matched"
+    )
+    result.update(
+        status=status,
+        exit_code={"matched": 0, "changed": 1, "error": 2, "invalid_baseline": 3}[
+            status
+        ],
+    )
+    return result
