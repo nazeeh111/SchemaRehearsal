@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .engine import Limits, RehearsalError, rehearse, validate_suite
+from .engine import Limits, RehearsalError, rehearse, rehearse_sequence, validate_suite
 from .example import create_example
-from .report import render_html
+from .report import render_html, render_sequence_html
 
 
 def _unique(pairs):
@@ -42,11 +42,22 @@ def main(argv=None):
         "example", help="Create a synthetic fixture in a new directory."
     )
     example.add_argument("directory", type=Path)
-    check = sub.add_parser(
-        "check", help="Compare application behaviors; source opens read-only."
-    )
-    for name in ("database", "migration", "suite", "output"):
-        check.add_argument("--" + name, required=True, type=Path)
+    for command, help_text in [
+        ("check", "Compare application behaviors; source opens read-only."),
+        (
+            "sequence",
+            "Check each ordered migration checkpoint against one starting snapshot.",
+        ),
+    ]:
+        check = sub.add_parser(command, help=help_text)
+        for name in ("database", "suite", "output"):
+            check.add_argument("--" + name, required=True, type=Path)
+        check.add_argument(
+            "--migration",
+            required=True,
+            type=Path,
+            **({"action": "append"} if command == "sequence" else {}),
+        )
     args = parser.parse_args(argv)
     try:
         if args.command == "example":
@@ -60,21 +71,29 @@ def main(argv=None):
                 "Output already exists. Choose a new directory; existing files are never replaced."
             )
         output = args.output.resolve()
+        migration_paths = (
+            args.migration if args.command == "sequence" else [args.migration]
+        )
+        if not 1 <= len(migration_paths) <= 8:
+            raise RehearsalError("A sequence needs 1–8 explicitly ordered migrations.")
         inputs = [
             args.database.resolve(),
-            args.migration.resolve(),
             args.suite.resolve(),
+            *(p.resolve() for p in migration_paths),
         ]
         if (
             output in inputs
             or any(output in p.parents for p in inputs)
-            or len(set(inputs)) != 3
+            or inputs[0] == inputs[1]
+            or any(p in inputs[:2] for p in inputs[2:])
         ):
             raise RehearsalError(
-                "Database, migration, suite and output paths must be distinct."
+                "Database, suite, migrations and output paths must be distinct."
             )
         limits = Limits()
-        migration = _read(args.migration, limits.input_bytes)
+        migrations = [_read(p, limits.input_bytes) for p in migration_paths]
+        if sum(len(sql.encode()) for sql in migrations) > limits.input_bytes:
+            raise RehearsalError("Combined migrations exceed the input limit.")
         suite = json.loads(
             _read(args.suite, limits.input_bytes),
             object_pairs_hook=_unique,
@@ -85,16 +104,38 @@ def main(argv=None):
         validate_suite(suite, limits)
         # Reserve output before database execution, including races with another invocation.
         args.output.mkdir(parents=False, exist_ok=False)
-        report = rehearse(args.database, migration, suite, limits=limits)
+        sequence = args.command == "sequence"
+        report = (
+            rehearse_sequence(args.database, migrations, suite, limits=limits)
+            if sequence
+            else rehearse(args.database, migrations[0], suite, limits=limits)
+        )
         for name, text in [
             ("report.json", json.dumps(report, indent=2, ensure_ascii=False) + "\n"),
-            ("report.html", render_html(report)),
+            (
+                "report.html",
+                render_sequence_html(report) if sequence else render_html(report),
+            ),
         ]:
             with (args.output / name).open("x", encoding="utf-8") as file:
                 file.write(text)
-        print(
-            f"{report['status']}: {len(report['scenarios'])} completed scenarios; report.json and report.html written."
-        )
+        if sequence:
+            completed = sum(c["status"] != "not_run" for c in report["checkpoints"])
+            first = report["first_changed"]
+            detail = (
+                f"first changed checkpoint: {first}"
+                if first
+                else "no observed behavior change"
+            )
+            print(
+                f"{report['status']}: {completed}/{len(migrations)} checkpoints; "
+                f"{detail}; final: {report['final_status']}; report.json and report.html written."
+            )
+        else:
+            print(
+                f"{report['status']}: {len(report['scenarios'])} completed scenarios; "
+                "report.json and report.html written."
+            )
         return report["exit_code"]
     except RehearsalError as error:
         print(str(error), file=sys.stderr)

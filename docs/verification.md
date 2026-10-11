@@ -1,5 +1,38 @@
 # Verification
 
+## Migration sequences in 0.3.0
+
+Local evidence from October 11, 2026, macOS arm64:
+
+- All 55 standard-library tests passed separately on Python 3.12 and 3.14.
+  Sequence cases include a changed middle checkpoint repaired by the final one,
+  cumulative data changes, independent workloads, frozen committed WAL capture
+  despite a later source writer, transaction-boundary failure, invalid baseline,
+  execution stopping, aggregate precedence, ordered input identity, limits,
+  source preservation, privacy and escaped HTML diagnostics.
+- A fresh independent reviewer reproduced three gaps: loss of an already observed
+  change when a later scenario errors, missing migration identity on a preexisting
+  single-migration error path, and omitted HTML diagnostic context. All three were
+  repaired with focused regression cases. Final review status is recorded with
+  the delivery, separately from these test results.
+- An offline-built wheel was installed without dependencies in separate clean
+  Python 3.12 and 3.14 environments. Existing installed CLI smoke checks passed.
+  The installed sequence demo ran outside the source checkout: final-only exit 0;
+  sequence exit 1; checkpoints matched/changed/matched, first change 2; controlled
+  source database bytes preserved. See [the recipe](sequences.md).
+- The actual generated report was operated in the Codex browser at desktop and
+  390-pixel width. Document width stayed 390, tables scrolled within focusable
+  regions, ArrowRight moved the sequence table by 40 pixels, and Enter opened
+  the repaired checkpoint. This is a bounded manual check, not accessibility
+  certification or physical-touch testing.
+- Source lint, formatting and whitespace checks passed. CI retains Python 3.11
+  and 3.14 and now runs the installed sequence recipe. Local results do not imply
+  a completed hosted CI run or local Python 3.11 verification.
+
+These are synthetic workflow checks, not evidence of production use or a
+concurrent deployment model. Single-migration functionality and its limitations
+remain. The [sample report](sequence-example.html) is actual generated output.
+
 ## Transaction scenarios in 0.2.0
 
 Local evidence from September 29, 2026, macOS arm64, Python 3.14.7 with SQLite 3.50.4:
