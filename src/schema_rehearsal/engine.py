@@ -240,8 +240,17 @@ WRITE_ACTIONS = {
 }
 
 
-def _guard(db, deadline, mode):
+def _guard(db, deadline, mode, allow_fts5=False):
     def authorize(action, first, second, database, trigger):
+        if action in {sqlite3.SQLITE_CREATE_VTABLE, sqlite3.SQLITE_DROP_VTABLE}:
+            return (
+                sqlite3.SQLITE_OK
+                if allow_fts5
+                and mode == "migration"
+                and database == "main"
+                and (second or "").lower() == "fts5"
+                else sqlite3.SQLITE_DENY
+            )
         if action in DENIED_ACTIONS or action in {
             sqlite3.SQLITE_CREATE_TEMP_TABLE,
             sqlite3.SQLITE_CREATE_TEMP_INDEX,
@@ -256,6 +265,14 @@ def _guard(db, deadline, mode):
             return sqlite3.SQLITE_DENY
         if action == sqlite3.SQLITE_PRAGMA:
             name = (first or "").lower()
+            # FTS5 asks for this read-only counter during MATCH and DML.
+            if (
+                allow_fts5
+                and name == "data_version"
+                and second is None
+                and database == "main"
+            ):
+                return sqlite3.SQLITE_OK
             if name in READ_PRAGMAS:
                 return sqlite3.SQLITE_OK
             if mode == "migration" and name in MIGRATION_PRAGMAS:
@@ -379,7 +396,61 @@ def _schema(db):
     }
 
 
-def _scenario(db, case, limits, deadline):
+def _fts5_tables(db, stack, limits, deadline, allow_fts5):
+    # Virtual tables have no b-tree root page. Ask SQLite to parse each stored
+    # declaration, capturing the actual module before denying creation. No
+    # module is instantiated or extension loaded by this admission connection.
+    tables = db.execute(
+        "SELECT name,sql FROM main.sqlite_schema WHERE type='table' AND rootpage=0"
+    ).fetchall()
+    if not tables:
+        return []
+    _require(allow_fts5, "Virtual-table databases are unsupported.")
+    admission = _connect(":memory:", stack, limits)
+    for name, sql in tables:
+        _deadline(deadline)
+        modules = []
+
+        def capture(action, first, second, database, trigger, modules=modules):
+            if action == sqlite3.SQLITE_CREATE_VTABLE:
+                modules.append(second)
+            if action == sqlite3.SQLITE_INSERT and first == "sqlite_master":
+                return sqlite3.SQLITE_OK
+            return sqlite3.SQLITE_DENY
+
+        admission.set_authorizer(capture)
+        admission.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+        try:
+            admission.execute(sql)
+        except sqlite3.DatabaseError as error:
+            _require(
+                getattr(error, "sqlite_errorcode", None) == sqlite3.SQLITE_AUTH
+                and len(modules) == 1
+                and (modules[0] or "").lower() == "fts5",
+                "Only built-in FTS5 virtual tables are supported with opt-in.",
+            )
+        else:
+            raise RehearsalError("Virtual-table module admission failed.")
+        finally:
+            _unguard(admission)
+    return [name for name, _ in tables]
+
+
+def _initialize_fts5(db, names, deadline):
+    # Connect admitted virtual tables before installing user SQL guards. Some
+    # SQLite versions initialize schema metadata on first use. This fixed,
+    # bounded SELECT returns no application rows and grants no user writes.
+    db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+    try:
+        for name in names:
+            _deadline(deadline)
+            identifier = '"' + name.replace('"', '""') + '"'
+            db.execute(f"SELECT * FROM main.{identifier} LIMIT 0").fetchall()
+    finally:
+        _unguard(db)
+
+
+def _scenario(db, case, limits, deadline, allow_fts5=False):
     outcomes, observations = [], []
     transactional = case.get("transaction") == "commit"
     commit = None
@@ -394,7 +465,7 @@ def _scenario(db, case, limits, deadline):
                 outcomes.append("not_run")
                 continue
             _deadline(deadline)
-            _guard(db, deadline, "step")
+            _guard(db, deadline, "step", allow_fts5)
             try:
                 # Consume RETURNING/SELECT output so steps retain result bounds.
                 _rows(
@@ -429,7 +500,7 @@ def _scenario(db, case, limits, deadline):
         if transactional and db.in_transaction:
             db.execute("ROLLBACK")
     for obs in case["observations"]:
-        _guard(db, deadline, "observation")
+        _guard(db, deadline, "observation", allow_fts5)
         try:
             cursor = db.execute(obs["sql"], obs.get("parameters", []))
             _require(cursor.description is not None, "Observation must return rows.")
@@ -441,12 +512,13 @@ def _scenario(db, case, limits, deadline):
     return outcomes, observations, commit
 
 
-def _rehearse_many(database, migrations, suite, *, limits=None):
+def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False):
     """Return a value-free report. Only explicitly selected database files are read."""
     limits = limits or Limits()
     report = {
         "format": "schema-rehearsal/report-v1",
         "sqlite_version": sqlite3.sqlite_version,
+        "fts5_enabled": allow_fts5 is True,
         "status": "error",
         "exit_code": 2,
         "database_checks": {},
@@ -456,6 +528,7 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
     reports = []
     stage = "input"
     try:
+        _require(isinstance(allow_fts5, bool), "allow_fts5 must be a boolean.")
         validate_suite(suite, limits)
         for migration in migrations:
             _require(
@@ -501,12 +574,8 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
             _backup(source, snapshot, limits, deadline)
             source.close()
             snapshot.execute("PRAGMA journal_mode=MEMORY")
-            _require(
-                not snapshot.execute(
-                    "SELECT 1 FROM sqlite_schema WHERE type='table' AND upper(sql) LIKE 'CREATE VIRTUAL TABLE%' LIMIT 1"
-                ).fetchone(),
-                "Virtual-table databases are unsupported.",
-            )
+            fts5_names = _fts5_tables(snapshot, stack, limits, deadline, allow_fts5)
+            _initialize_fts5(snapshot, fts5_names, deadline)
             stage = "baseline"
             before_check = _checks(snapshot, deadline)
             report["database_checks"]["before"] = before_check
@@ -523,6 +592,7 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
             before_schema = _schema(snapshot)
             migrated = _connect(":memory:", stack, limits)
             _backup(snapshot, migrated, limits, deadline)
+            _initialize_fts5(migrated, fts5_names, deadline)
             common = dict(report)
             for migration in migrations:
                 report = dict(
@@ -535,7 +605,7 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
                     migration.encode()
                 ).hexdigest()
                 stage = "migration"
-                _guard(migrated, deadline, "migration")
+                _guard(migrated, deadline, "migration", allow_fts5)
                 try:
                     for statement in _statements(migration, deadline):
                         _deadline(deadline)
@@ -572,9 +642,17 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
                         right = _connect(":memory:", scenario_stack, limits)
                         _backup(snapshot, left, limits, deadline)
                         _backup(migrated, right, limits, deadline)
+                        _initialize_fts5(left, fts5_names, deadline)
+                        right_names = [
+                            row[0]
+                            for row in right.execute(
+                                "SELECT name FROM main.sqlite_schema WHERE type='table' AND rootpage=0"
+                            )
+                        ]
+                        _initialize_fts5(right, right_names, deadline)
                         stage = "baseline_scenario"
                         baseline_outcomes, baseline_rows, baseline_commit = _scenario(
-                            left, case, limits, deadline
+                            left, case, limits, deadline, allow_fts5
                         )
                         expected = [
                             step.get("expect_error", "ok") for step in case["steps"]
@@ -615,7 +693,7 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
                             return reports
                         stage = "migrated_scenario"
                         migrated_outcomes, migrated_rows, migrated_commit = _scenario(
-                            right, case, limits, deadline
+                            right, case, limits, deadline, allow_fts5
                         )
                         case_report = {
                             "name": case["name"],
@@ -694,14 +772,26 @@ def _rehearse_many(database, migrations, suite, *, limits=None):
 
 
 def rehearse(
-    database: Path, migration: str, suite: dict, *, limits: Limits | None = None
+    database: Path,
+    migration: str,
+    suite: dict,
+    *,
+    limits: Limits | None = None,
+    allow_fts5: bool = False,
 ):
     """Compare one migration with a frozen, read-only source snapshot."""
-    return _rehearse_many(database, [migration], suite, limits=limits)[0]
+    return _rehearse_many(
+        database, [migration], suite, limits=limits, allow_fts5=allow_fts5
+    )[0]
 
 
 def rehearse_sequence(
-    database: Path, migrations: list[str], suite: dict, *, limits=None
+    database: Path,
+    migrations: list[str],
+    suite: dict,
+    *,
+    limits=None,
+    allow_fts5: bool = False,
 ):
     """Compare each committed checkpoint with the same original snapshot.
 
@@ -712,6 +802,7 @@ def rehearse_sequence(
     result = {
         "format": "schema-rehearsal/sequence-report-v1",
         "sqlite_version": sqlite3.sqlite_version,
+        "fts5_enabled": allow_fts5 is True,
         "status": "error",
         "exit_code": 2,
         "first_changed": None,
@@ -734,7 +825,9 @@ def rehearse_sequence(
     except RehearsalError as error:
         result.update(diagnostic=str(error), stage="input")
         return result
-    reports = _rehearse_many(database, migrations, suite, limits=limits)
+    reports = _rehearse_many(
+        database, migrations, suite, limits=limits, allow_fts5=allow_fts5
+    )
     result["sequence_sha256"] = hashlib.sha256(
         json.dumps(
             [hashlib.sha256(sql.encode()).hexdigest() for sql in migrations],

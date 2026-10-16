@@ -141,8 +141,8 @@ class SequenceTests(unittest.TestCase):
         original = engine._scenario
         seen = []
 
-        def observe(db, case, limits, deadline):
-            result = original(db, case, limits, deadline)
+        def observe(db, case, limits, deadline, allow_fts5=False):
+            result = original(db, case, limits, deadline, allow_fts5)
             seen.append(db.execute("SELECT count(*) FROM accounts").fetchone()[0])
             if len(seen) == 1:
                 writer.execute("INSERT INTO accounts VALUES(22, 'later source row')")

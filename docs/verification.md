@@ -1,5 +1,43 @@
 # Verification
 
+## Opt-in FTS5 in 0.4.0
+
+Local evidence from October 16, 2026, macOS arm64:
+
+- The 62-test standard-library suite passed on Python 3.14 / SQLite 3.50.4.
+  Seven new FTS5 regressions passed on that runtime and bundled Python 3.12 /
+  SQLite 3.53.1. A private test spy needed the new keyword forwarded; the first
+  failing run was retained before the correction. A subsequent callback binding
+  cleanup passed the seven focused cases again. Formatting preserved the Python
+  syntax tree; import sorting and an explicit test subprocess option were the
+  other cleanup changes. Lint, source compilation and whitespace checks passed.
+- A fresh independent reviewer accepted the change with no actionable findings.
+  Its 57-case matrix passed on both SQLite versions: cold stored/contentless and
+  reduced-index configurations, quoted/multiple tables, exact module refusals,
+  migration creation/removal/rename, transactional FTS writes, read-only
+  observations, scenario schema/transaction restrictions, unsafe SQL refusals,
+  limits, checkpoints, source bytes and JSON/HTML privacy. Two initial reviewer
+  expectations were corrected against raw SQLite behavior, with their original
+  failed harness receipts preserved. These are finite synthetic checks.
+- The production CLI's original synthetic [search recipe](full-text-search.md)
+  returned default refusal 2, lost-update-trigger 1, repaired trigger 0,
+  tokenizer change 1 and cumulative sequence 1. Checkpoints were
+  matched/changed/matched with first change 2. Controlled source bytes were
+  preserved; report JSON omitted article values, search terms, SQL and paths.
+- The actual generated HTML was inspected at desktop width 1280 and phone width
+  390. The document did not overflow horizontally. At phone width, 640-pixel
+  tables scrolled within focusable 356-pixel regions; ArrowRight moved the
+  focused table and Enter opened reproduction details. The README image is an
+  actual report screenshot. This is a bounded manual check, not accessibility
+  certification.
+
+The feature uses only built-in FTS5 and explicit opt-in. General database checks
+are not an FTS5 index/content consistency check. These results do not establish
+universal SQLite compatibility, production performance, all search semantics or
+outside adoption. No FTS5-unavailable Python build was present locally; those
+feature tests explicitly skip when unavailable. Hosted CI and installed-artifact
+results are separate from these local source checks.
+
 ## Migration sequences in 0.3.0
 
 Local evidence from October 11, 2026, macOS arm64:
