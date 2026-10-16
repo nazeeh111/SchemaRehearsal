@@ -15,7 +15,7 @@ A schema diff is context rather than a pass/fail gate: a useful migration change
 
 ## Restrictions
 
-The SQLite authorizer denies ATTACH/DETACH, virtual tables, explicit TEMP objects, dangerous pragmas and external file/extension functions. VACUUM INTO requires an attachment and is rejected. Scenario mutations permit DML, not DDL or transaction control; observations permit reads only. Independent copies avoid relying on rollback to erase every possible scenario effect.
+The SQLite authorizer denies ATTACH/DETACH, virtual tables by default, explicit TEMP objects, dangerous pragmas and external file/extension functions. VACUUM INTO requires an attachment and is rejected. Scenario mutations permit DML, not DDL or transaction control; observations permit reads only. Independent copies avoid relying on rollback to erase every possible scenario effect.
 
 Scenario steps default to autocommit mode, so each successful statement commits individually. `transaction: "commit"` starts and commits one transaction with fixed engine SQL outside the user-SQL authorizer. User-supplied transaction control remains denied. Exact `expect_commit_error` constraint expectations are legal only in commit mode. Unexpected baseline step or commit outcomes invalidate the baseline; migrated differences change the result. Cleanup clears deadline handlers before rollback so pending rows cannot reach observations. Nested transactions and savepoints are unsupported.
 
@@ -37,3 +37,13 @@ The selected source opens read-only. SQLite can still touch coordination sidecar
 - [SQLite pragmas](https://www.sqlite.org/pragma.html): integrity and foreign-key checks are separate.
 - [Python sqlite3](https://docs.python.org/3/library/sqlite3.html): backup, authorizer, limits and progress callbacks.
 - [Atlas migration tests](https://www.atlasgo.io/testing/migrate): existing work; no novelty claim for the general technique.
+
+## Opt-in full-text search
+
+`allow_fts5=True` permits only SQLite's built-in FTS5 module, including migration
+creation/removal and its required internal operations. The default still refuses
+virtual-table sources. Other virtual modules and external extension loading remain
+unsupported. Scenario schema/transaction changes and observation writes stay
+blocked. See the [search walkthrough](full-text-search.md) for the runnable
+synthetic workflow and the distinction between general database integrity, full
+FTS5 index consistency and declared search semantics.

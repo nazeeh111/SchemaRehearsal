@@ -2,13 +2,15 @@
 
 **Find application behavior changes that a successful SQLite migration can hide.**
 
-A table rebuild can preserve every row and pass database integrity checks while dropping the trigger that records payments. SchemaRehearsal runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
+A table rebuild can preserve every row and pass database integrity checks while dropping an audit trigger or breaking search maintenance. SchemaRehearsal runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
 
-![Actual transaction report: child-before-parent steps and commit succeed on both copies; a missing parent is rejected at commit and rolled back before observations.](docs/transaction-report.jpg)
+![Actual search report: an update succeeds on both copies, but the updated article returns one search hit before migration and zero after it.](docs/search-report.png)
 
-The [transaction walkthrough](docs/transactions.md) reproduces this report with synthetic data.
+The [full-text search walkthrough](docs/full-text-search.md) reproduces this report with synthetic data. Audit, transaction and checkpoint examples are included too.
 
-Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.3.0-py3-none-any.whl`. Or install from this source checkout:
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab)](pyproject.toml) [![SQLite · local copies](https://img.shields.io/badge/SQLite-local_copies-4a36b7)](docs/design.md) [![MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
+
+Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl`. Or install from this source checkout:
 
 ```sh
 python -m venv .venv
@@ -68,6 +70,28 @@ disabled must explicitly disable them. The same workloads must be valid against
 the starting schema and relevant checkpoints. New application versions,
 concurrent deployments and migration-runner bookkeeping are not modeled.
 
+## Keep search working after a migration
+
+Built-in SQLite FTS5 support is explicit: use `--allow-fts5` with `check` or
+`sequence`. Declared writes exercise index maintenance; read-only `MATCH`
+observations compare search behavior. A consistent index can still return
+different results after a tokenizer change.
+
+```sh
+schema-rehearsal example --fts5 search-example
+schema-rehearsal check --allow-fts5 \
+  --database search-example/articles.sqlite \
+  --migration search-example/broken.sql \
+  --suite search-example/suite.json --output search-report
+# Exit 1: article rows remain, but an update stops reaching search.
+```
+
+The [full-text search walkthrough](docs/full-text-search.md) includes repaired,
+tokenizer and checkpoint examples. SQLite's built-in full FTS5 consistency check
+already detects index/content mismatch. This extension adds existing rehearsal
+orchestration and declared search comparisons; general database checks are not
+an FTS5 consistency certification. Other virtual-table modules remain refused.
+
 ## Describe the behavior you depend on
 
 The [runnable walkthrough](docs/walkthrough.md) demonstrates how to ignore row
@@ -122,7 +146,7 @@ The source opens with SQLite `mode=ro`. SQLite's backup API captures committed W
 
 Default limits: 64 MiB per database copy and source sidecar, 1 MiB per input file, 32 scenarios, 64 steps and 16 observations per scenario, 10,000 rows and 2 MiB encoded result data per statement, and a 30-second cooperative execution deadline. Result bounds apply to migration and step results too. Copies coexist, so these are workload bounds, not a hard total process-memory or operating-system sandbox. A single SQLite call or OS operation can delay cooperative interruption.
 
-External attachment, extension loading, virtual tables, explicit TEMP objects, file-writing SQL, unsafe pragmas and common time/random functions are blocked. Migrations may set only `foreign_keys`, `defer_foreign_keys` and `user_version`; selected metadata pragmas are readable. Foreign-key enforcement and recursive triggers are enabled for scenarios. Custom collations/functions, encrypted databases and virtual-table databases are unsupported. A workload requiring blocked date/time functions needs fixed values supplied as parameters. See [design and tradeoffs](docs/design.md).
+External attachment, extension loading, virtual tables by default, explicit TEMP objects, file-writing SQL, unsafe pragmas and common time/random functions are blocked. Migrations may set only `foreign_keys`, `defer_foreign_keys` and `user_version`; selected metadata pragmas are readable. Foreign-key enforcement and recursive triggers are enabled for scenarios. Only built-in FTS5 is available with explicit opt-in; your SQLite build must include it. Custom collations/functions, encrypted databases and other virtual-table modules are unsupported. A workload requiring blocked date/time functions needs fixed values supplied as parameters. See [design and tradeoffs](docs/design.md).
 
 ## Development
 

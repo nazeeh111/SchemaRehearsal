@@ -7,7 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .engine import Limits, RehearsalError, rehearse, rehearse_sequence, validate_suite
-from .example import create_example
+from .example import create_example, create_fts5_example
 from .report import render_html, render_sequence_html
 
 
@@ -42,6 +42,11 @@ def main(argv=None):
         "example", help="Create a synthetic fixture in a new directory."
     )
     example.add_argument("directory", type=Path)
+    example.add_argument(
+        "--fts5",
+        action="store_true",
+        help="Create a synthetic full-text search fixture.",
+    )
     for command, help_text in [
         ("check", "Compare application behaviors; source opens read-only."),
         (
@@ -50,6 +55,11 @@ def main(argv=None):
         ),
     ]:
         check = sub.add_parser(command, help=help_text)
+        check.add_argument(
+            "--allow-fts5",
+            action="store_true",
+            help="Allow only built-in FTS5 virtual tables.",
+        )
         for name in ("database", "suite", "output"):
             check.add_argument("--" + name, required=True, type=Path)
         check.add_argument(
@@ -61,6 +71,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "example":
+            if args.fts5:
+                create_fts5_example(args.directory)
+                print("Synthetic full-text search example created.")
+                return 0
             create_example(args.directory)
             print(
                 "Synthetic example created: 20 accounts, 200 orders, three migrations and a scenario suite."
@@ -106,9 +120,21 @@ def main(argv=None):
         args.output.mkdir(parents=False, exist_ok=False)
         sequence = args.command == "sequence"
         report = (
-            rehearse_sequence(args.database, migrations, suite, limits=limits)
+            rehearse_sequence(
+                args.database,
+                migrations,
+                suite,
+                limits=limits,
+                allow_fts5=args.allow_fts5,
+            )
             if sequence
-            else rehearse(args.database, migrations[0], suite, limits=limits)
+            else rehearse(
+                args.database,
+                migrations[0],
+                suite,
+                limits=limits,
+                allow_fts5=args.allow_fts5,
+            )
         )
         for name, text in [
             ("report.json", json.dumps(report, indent=2, ensure_ascii=False) + "\n"),
