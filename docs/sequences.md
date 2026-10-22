@@ -86,3 +86,58 @@ comparison with a fixed starting state. It does not generate or deploy migration
 SQLite's [table-rebuild guidance](https://sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes)
 explicitly requires reconstructing indexes, triggers and views. The deliberately
 omitted trigger in this synthetic example follows that known failure mechanism.
+
+## Preserve publication receipts after deleting content
+
+A second [runnable example](../examples/publication_receipts.py) follows a concrete
+preservation contract suggested by
+[TheodorNEngoy in the Datasette discussion](https://github.com/simonw/datasette/discussions/2997#discussioncomment-18870847):
+content can be deleted while its publication receipt remains, so a later retry
+with the same account and request ID cannot publish it again. The fixture and SQL
+are synthetic, developed with Codex assistance. They do not reproduce or validate
+Turnfeed's schema, implementation, or deployment.
+
+With SchemaRehearsal installed, choose a new destination with an existing parent:
+
+```sh
+python examples/publication_receipts.py /tmp/publication-receipts-demo
+```
+
+The fixture publishes a synthetic post, records its receipt, then deletes only
+the content. `publication_receipts` uses `(account_id, request_id)` as its primary
+key and retains `original_post_id`. It deliberately has no foreign key requiring
+the content row to exist. The sequence runs three committed SQL files:
+
+| Checkpoint | Migration | Deleted content rows | Original receipt rows | Result |
+| --- | --- | ---: | ---: | --- |
+| 1 | Retain a separate recovery copy of the receipts | 0 | 1 | matched |
+| 2 | Wrongly prune receipts with no remaining content | 0 | 0 | changed |
+| 3 | Restore original receipt keys and payload from the retained copy | 0 | 1 | matched |
+
+The `Deleted post invariant` scenario has no writes. It compares content absence
+by both the original post ID and the account/request key, plus the exact receipt
+key and original post ID at each checkpoint against the starting snapshot. The receipt observation selects the actual row rather than
+only a count, so changing its payload also changes the comparison. As elsewhere,
+the tool compares declared observations; it does not infer these requirements.
+
+A separate `Same account delayed retry` scenario uses a small SQL stand-in for an
+application's receipt lookup: insert content only when no receipt exists for that
+account and request ID. Its content-row results are **0 → 1 → 0**. An independent
+account can reuse the request ID at every checkpoint, preventing an accidentally
+global request-ID lookup from passing this control. Each scenario starts from its
+own disposable copy, so these trial writes never become migration state.
+
+All SQLite integrity and foreign-key checks pass. The ordinary final-only check
+returns 0 because all three migrations finish before the scenarios run. The
+sequence returns 1, identifies checkpoint 2 as the first change, and reports
+`final_status: "matched"`. Open the generated `sequence/report.html` to inspect
+the comparisons; its row counts and hashes omit the raw receipt values.
+
+The retained recovery table is explicitly created at checkpoint 1 and used by
+checkpoint 3. SchemaRehearsal does not recover a discarded receipt from deleted
+content or generate a repair. A real recovery source would need its own retention
+and consistency guarantees. This example checks one sequential database contract,
+not application retry code, concurrent requests, network delivery, or crash
+recovery. Actual application retry behavior needs a corresponding integration
+test. If no application observes intermediate committed states, evaluate whether
+these particular checkpoints matter to your migration runner.
