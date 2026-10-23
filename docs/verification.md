@@ -58,7 +58,7 @@ Local evidence from October 11, 2026, macOS arm64:
   The installed sequence demo ran outside the source checkout: final-only exit 0;
   sequence exit 1; checkpoints matched/changed/matched, first change 2; controlled
   source database bytes preserved. See [the recipe](sequences.md).
-- The actual generated report was operated in the Codex browser at desktop and
+- The actual generated report was operated in the browser at desktop and
   390-pixel width. Document width stayed 390, tables scrolled within focusable
   regions, ArrowRight moved the sequence table by 40 pixels, and Enter opened
   the repaired checkpoint. This is a bounded manual check, not accessibility

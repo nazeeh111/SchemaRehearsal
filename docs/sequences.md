@@ -4,7 +4,7 @@ This example uses synthetic orders and payments. It runs the production CLI,
 including the ordinary final-only comparison and the sequence command. No
 private database or network service is needed.
 
-After installing the 0.3.0 wheel, run this script from a source checkout or release
+After installing SchemaRehearsal, run this script from a source checkout or release
 source archive. Choose a new destination whose parent already exists:
 
 ```sh
@@ -94,7 +94,7 @@ preservation contract suggested by
 [TheodorNEngoy in the Datasette discussion](https://github.com/simonw/datasette/discussions/2997#discussioncomment-18870847):
 content can be deleted while its publication receipt remains, so a later retry
 with the same account and request ID cannot publish it again. The fixture and SQL
-are synthetic, developed with Codex assistance. They do not reproduce or validate
+are synthetic. They do not reproduce or validate
 Turnfeed's schema, implementation, or deployment.
 
 With SchemaRehearsal installed, choose a new destination with an existing parent:

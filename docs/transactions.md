@@ -4,7 +4,7 @@ A deferred foreign key checks a relationship when the transaction commits. An
 application can insert a child first, insert its parent second, and commit both.
 Autocommit, which commits each statement separately, rejects the first insert.
 
-With SchemaRehearsal 0.2.0 installed, run the synthetic recipe from this checkout:
+With SchemaRehearsal installed, run the synthetic recipe from this checkout:
 
 ```sh
 python examples/transactions.py transaction-demo
