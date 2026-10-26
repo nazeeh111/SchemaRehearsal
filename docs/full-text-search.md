@@ -12,6 +12,18 @@ modules remain unsupported, and virtual tables are still refused by default.
 
 ## Run the complete example
 
+For a first look without installation, run this from the source checkout:
+
+```sh
+python3 examples/quickstart.py --fts5 search-demo
+```
+
+Open `search-demo/broken/report.html`. The script checks the expected lost-search
+result and the repaired and unchanged controls, then exits 0 only when all three
+results reproduce. It creates only synthetic data in a new directory and needs
+Python 3.11+ with built-in SQLite FTS5. General integrity checks in these reports
+are not the full FTS5 index/content consistency check described below.
+
 Install the release wheel or source checkout. From a release source archive or
 checkout, choose a new destination whose parent exists:
 
