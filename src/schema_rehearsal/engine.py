@@ -635,6 +635,12 @@ def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False
                                 else "changed",
                             }
                         )
+                migrated_fts5_names = [
+                    row[0]
+                    for row in migrated.execute(
+                        "SELECT name FROM main.sqlite_schema WHERE type='table' AND rootpage=0"
+                    )
+                ]
                 changed = False
                 for case in suite["scenarios"]:
                     with ExitStack() as scenario_stack:
@@ -643,13 +649,7 @@ def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False
                         _backup(snapshot, left, limits, deadline)
                         _backup(migrated, right, limits, deadline)
                         _initialize_fts5(left, fts5_names, deadline)
-                        right_names = [
-                            row[0]
-                            for row in right.execute(
-                                "SELECT name FROM main.sqlite_schema WHERE type='table' AND rootpage=0"
-                            )
-                        ]
-                        _initialize_fts5(right, right_names, deadline)
+                        _initialize_fts5(right, migrated_fts5_names, deadline)
                         stage = "baseline_scenario"
                         baseline_outcomes, baseline_rows, baseline_commit = _scenario(
                             left, case, limits, deadline, allow_fts5
