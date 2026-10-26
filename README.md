@@ -8,9 +8,58 @@ A table rebuild can preserve every row and pass database integrity checks while 
 
 The [full-text search walkthrough](docs/full-text-search.md) reproduces this report with synthetic data. Audit, transaction and checkpoint examples are included too.
 
+[Try without installing](#try-it-without-installing) · [Use in CI](docs/continuous-integration.md) · [What a result means](#what-the-result-means)
+
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab)](pyproject.toml) [![SQLite · local copies](https://img.shields.io/badge/SQLite-local_copies-4a36b7)](docs/design.md) [![MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
-Python 3.11 or later. No runtime dependencies, account, network connection, or database server. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) includes a wheel for offline installation with `python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl`. Or install from this source checkout:
+## Try it without installing
+
+Python 3.11 or later and Git are enough. This runs the actual engine from the
+source checkout with synthetic data; it needs no package installation, account
+or database server. Cloning requires network access; the demo then runs locally.
+
+```sh
+git clone https://github.com/nazeeh111/SchemaRehearsal.git
+cd SchemaRehearsal
+python3 examples/quickstart.py rehearsal-demo
+```
+
+Expected output:
+
+```text
+broken    exit 1  audit rows 17 -> 0
+repaired  exit 0  audit rows 17 -> 17
+unchanged exit 0  audit rows 17 -> 17
+All three runs passed integrity and foreign-key checks.
+Generated source database bytes unchanged.
+```
+
+Open `rehearsal-demo/broken/report.html`, then compare
+`rehearsal-demo/repaired/report.html`. The wrapper checks all three results and
+returns 0 when those expected exits are reproduced. `summary.json` records the
+results and generated source database hashes. This is a demonstration, not a
+check of your own application. Choose a new directory to run it again.
+
+To reproduce the search report pictured above, use the same no-install path:
+
+```sh
+python3 examples/quickstart.py --fts5 search-demo
+```
+
+This requires built-in SQLite FTS5. Open `search-demo/broken/report.html`: an
+updated article has one search hit before migration and zero after it. The
+repaired and unchanged controls each retain the hit. The printed general
+integrity checks do not check FTS5 index/content consistency. See the
+[search walkthrough](docs/full-text-search.md#compare-against-sqlites-own-checks)
+for SQLite's dedicated check and the complete example.
+
+## Install the command
+
+No runtime dependencies, network connection or database server are needed after
+installation. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest)
+includes a wheel for offline installation with
+`python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl`.
+Or, from the cloned source checkout above:
 
 ```sh
 python -m venv .venv
@@ -33,6 +82,10 @@ schema-rehearsal check --database example/orders.sqlite \
 ```
 
 Open `broken-report/report.html` in your browser, or read `report.json` in CI. Every output directory must be new; existing files are never replaced. The example command also requires a new directory, with an existing parent. An error can leave a partial new directory for inspection; choose a new path for a retry.
+
+For an application check, preserve all nonzero command exits as failures. The
+[CI guide](docs/continuous-integration.md) covers single migrations, ordered
+checkpoints and retaining a report after failure.
 
 The original synthetic fixture has 20 accounts and 200 orders. Both migrations keep those rows and pass integrity and foreign-key checks. Paying 17 orders produces 17 audit records before migration, **zero** after the broken migration, and 17 after the repaired one. A second scenario checks an exact constraint failure; a third demonstrates that scenarios start independently. No production database is included.
 
