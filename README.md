@@ -4,11 +4,11 @@
 
 Run the same declared workload on independent before/after copies, then inspect what changed. Keepstep never applies a migration to your selected source database.
 
-[Try without installing](#try-it-without-installing) · [What a result means](#what-the-result-means) · [Use in CI](docs/continuous-integration.md)
+[Inspect a recorded search report](https://nazeeh111.github.io/SchemaRehearsal/) · [Run without installing](#try-it-without-installing) · [What a result means](#what-the-result-means) · [Use in CI](docs/continuous-integration.md)
 
 [![Actual Keepstep search report: an update succeeds on both copies, but the updated article returns one search hit before migration and zero after it.](docs/keepstep-search-report.jpg)](docs/keepstep-search-report.jpg)
 
-*The current report, using the included synthetic FTS5 example. Open the image for the full-size witness.*
+*The current report, using the included synthetic FTS5 example. [Inspect the HTML report and its repaired and unchanged controls](https://nazeeh111.github.io/SchemaRehearsal/), or open the image for the full-size witness. The hosted reports are recorded examples.*
 
 ## Try it without installing
 

@@ -1,0 +1,92 @@
+{
+  "format": "schema-rehearsal/report-v1",
+  "sqlite_version": "3.50.4",
+  "fts5_enabled": true,
+  "status": "matched",
+  "exit_code": 0,
+  "database_checks": {
+    "before": {
+      "integrity_ok": true,
+      "foreign_keys_ok": true
+    },
+    "after": {
+      "integrity_ok": true,
+      "foreign_keys_ok": true
+    }
+  },
+  "schema_changes": [],
+  "scenarios": [
+    {
+      "name": "Search an updated article",
+      "steps": [
+        {
+          "number": 1,
+          "before": "ok",
+          "after": "ok",
+          "equal": true
+        }
+      ],
+      "observations": [
+        {
+          "name": "Updated article appears in search",
+          "order": "ordered",
+          "equal": true,
+          "before_rows": 1,
+          "after_rows": 1,
+          "before_columns": 1,
+          "after_columns": 1
+        }
+      ],
+      "status": "matched"
+    },
+    {
+      "name": "Search an inserted article",
+      "steps": [
+        {
+          "number": 1,
+          "before": "ok",
+          "after": "ok",
+          "equal": true
+        }
+      ],
+      "observations": [
+        {
+          "name": "Inserted article appears in search",
+          "order": "ordered",
+          "equal": true,
+          "before_rows": 1,
+          "after_rows": 1,
+          "before_columns": 1,
+          "after_columns": 1
+        }
+      ],
+      "status": "matched"
+    },
+    {
+      "name": "Remove a deleted article from search",
+      "steps": [
+        {
+          "number": 1,
+          "before": "ok",
+          "after": "ok",
+          "equal": true
+        }
+      ],
+      "observations": [
+        {
+          "name": "Deleted article has no search hit",
+          "order": "ordered",
+          "equal": true,
+          "before_rows": 0,
+          "after_rows": 0,
+          "before_columns": 1,
+          "after_columns": 1
+        }
+      ],
+      "status": "matched"
+    }
+  ],
+  "migration_sha256": "b2cd9f4ae404b6e6bc86727423413cdaf12146014f814668692a5aac6baa00f7",
+  "suite_sha256": "a4fc2a9f7819a24d87b635e576565b4c2060fa7f43a6e9f945994fec973746e9",
+  "snapshot_sha256": "9ebcae997f2f83395db5061f067d4da70c349715ca9fbf929b07e51aece0befa"
+}

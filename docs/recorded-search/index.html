@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Inspect a recorded SQLite migration example: an update succeeds while its article disappears from full-text search. Compare broken, repaired and unchanged reports.">
+  <title>Keepstep · Recorded SQLite search example</title>
+  <style>
+    :root { color-scheme: light; --ink: #171923; --muted: #424957; --line: #cdd2df; --accent: #4a36b7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); font: 17px/1.6 system-ui, sans-serif; }
+    main { max-width: 960px; margin: auto; padding: 40px 28px; }
+    header { border-top: 5px solid var(--ink); padding-top: 20px; }
+    .brand { font-size: 18px; font-weight: 700; }
+    .label, .note { color: var(--muted); }
+    h1 { max-width: 760px; margin: 20px 0; font-size: clamp(32px, 5vw, 52px); line-height: 1.12; letter-spacing: -.035em; }
+    h2 { margin-top: 36px; font-size: 24px; }
+    p { max-width: 780px; }
+    a { color: var(--accent); text-underline-offset: 4px; }
+    a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    .reports { list-style: none; padding: 0; margin: 28px 0; border-top: 1px solid var(--line); }
+    .reports li { padding: 20px 0; border-bottom: 1px solid var(--line); }
+    .reports a { font-weight: 650; }
+    .reports .json { font-weight: 400; }
+    .reports p { margin: 6px 0 0; }
+    code { font-family: ui-monospace, monospace; font-size: .9em; }
+    pre { padding: 18px; background: #f3f0ff; overflow-x: auto; line-height: 1.6; }
+    details { border-top: 1px solid var(--line); padding: 20px 0; margin-top: 32px; }
+    summary { cursor: pointer; font-weight: 650; }
+    footer { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+    @media (max-width: 600px) { main { padding: 24px 18px; } body { font-size: 16px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">Keepstep</div>
+    <p class="label">Recorded synthetic example · SQLite 3.50.4</p>
+    <h1>An update succeeds. Search loses the article.</h1>
+    <p>A migration removes an external-content FTS5 update trigger. The following write succeeds, but a search for the new word returns one result before migration and none afterward.</p>
+  </header>
+  <ul class="reports" aria-label="Compare the recorded controls">
+    <li><a href="broken.html">Inspect the broken migration</a> · <a class="json" href="broken.json">Report JSON</a><p>Search hits: 1 → 0. Exit 1: a declared behavior changed.</p></li>
+    <li><a href="repaired.html">Inspect the repaired migration</a> · <a class="json" href="repaired.json">Report JSON</a><p>Search hits: 1 → 1. Exit 0: the declared workloads match.</p></li>
+    <li><a href="unchanged.html">Inspect the unchanged control</a> · <a class="json" href="unchanged.json">Report JSON</a><p>Search hits: 1 → 1. Exit 0: the declared workloads match.</p></li>
+  </ul>
+  <p>General integrity and foreign-key checks passed in all three runs. SQLite also provides a <a href="https://www.sqlite.org/fts5.html#the_integrity_check_command">dedicated FTS5 index/content consistency check</a>; Keepstep does not automatically run it.</p>
+  <h2>Reproduce locally</h2>
+  <p>Use Python 3.11+ with built-in FTS5 and Git. The example creates synthetic data in a new directory and checks the broken, repaired and unchanged results. No package installation is needed.</p>
+  <pre><code>git clone https://github.com/nazeeh111/SchemaRehearsal.git
+cd SchemaRehearsal
+git checkout c303e9b4d00e5fa274ebd1a2f7eb811d2cb005d7
+python3 examples/quickstart.py --fts5 search-demo</code></pre>
+  <p>Open <code>search-demo/broken/report.html</code>. To examine your own migration, <a href="https://github.com/nazeeh111/SchemaRehearsal#describe-the-behavior-you-depend-on">write a workload suite</a> for the local CLI.</p>
+  <details>
+    <summary>What these reports establish</summary>
+    <p>These are static reports from the included synthetic articles, generated from <a href="https://github.com/nazeeh111/SchemaRehearsal/tree/c303e9b4d00e5fa274ebd1a2f7eb811d2cb005d7">source revision c303e9b4</a>. Each scenario uses fresh before/after copies. The JSON files retain input hashes and the recorded SQLite version.</p>
+    <p>Keepstep compares only declared workloads. A match is not a guarantee about other queries, database versions or production concurrency. A few direct SQL assertions may be simpler for a single query. The <a href="https://github.com/nazeeh111/SchemaRehearsal/blob/main/docs/full-text-search.md">walkthrough</a> explains the example and SQLite's full consistency check.</p>
+    <p>Development and this presentation used AI assistance.</p>
+  </details>
+  <footer><a href="https://github.com/nazeeh111/SchemaRehearsal">Source and setup</a> · MIT license · Local SQLite migration testing</footer>
+</main>
+</body>
+</html>

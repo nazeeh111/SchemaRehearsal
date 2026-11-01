@@ -5,6 +5,10 @@ their search index. A consistent index can also return different results after
 a tokenizer change. Declare the writes and search queries your application
 depends on, then compare them on disposable before/after copies.
 
+For a first look, [inspect the recorded reports](https://nazeeh111.github.io/SchemaRehearsal/)
+for the broken, repaired and unchanged synthetic migrations. These static reports
+can be read without running the tool; the recipe below reproduces them locally.
+
 The existing `schema-rehearsal` 0.4.0 release supports SQLite's built-in FTS5
 with explicit opt-in.
 FTS5 is SQLite's full-text search module. Its availability depends on your
