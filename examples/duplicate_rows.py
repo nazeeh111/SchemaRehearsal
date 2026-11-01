@@ -1,4 +1,4 @@
-"""Run the walkthrough with an installed SchemaRehearsal, using synthetic data."""
+"""Run the walkthrough with an installed Keepstep, using synthetic data."""
 
 import json
 from pathlib import Path

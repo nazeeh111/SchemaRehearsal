@@ -5,7 +5,8 @@ their search index. A consistent index can also return different results after
 a tokenizer change. Declare the writes and search queries your application
 depends on, then compare them on disposable before/after copies.
 
-SchemaRehearsal 0.4.0 supports SQLite's built-in FTS5 with explicit opt-in.
+The existing `schema-rehearsal` 0.4.0 release supports SQLite's built-in FTS5
+with explicit opt-in.
 FTS5 is SQLite's full-text search module. Its availability depends on your
 Python SQLite build. No extension is downloaded or loaded. Other virtual-table
 modules remain unsupported, and virtual tables are still refused by default.
@@ -91,7 +92,7 @@ whether future writes maintain the index. A consistent index also does not
 specify whether your application's query should still find the same articles
 after changing tokenization.
 
-SchemaRehearsal does not automatically run this FTS5 command. Its reported
+Keepstep does not automatically run this FTS5 command. Its reported
 `integrity_ok` and `foreign_keys_ok` fields refer to the general database checks,
 not index-to-content consistency. Include application search observations in
 your suite and use the built-in full check separately when that is your goal.
@@ -100,7 +101,7 @@ omitted; it is not silently treated as an empty search result.
 
 Migration tests and SQL assertions are established techniques. A small disposable
 SQL test may be simpler for a single query. This extension lets an existing
-SchemaRehearsal suite retain its independent scenarios, checkpoint comparisons
+Keepstep suite retain its independent scenarios, checkpoint comparisons
 and private-value reports when the database contains FTS5. It does not certify
 every write path, undeclared search query, tokenizer, ranking rule or future
 SQLite version.

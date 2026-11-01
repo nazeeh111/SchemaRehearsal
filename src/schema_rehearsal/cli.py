@@ -34,7 +34,7 @@ def _read(path, limit):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Rehearse SQLite migrations on disposable copies with declared application scenarios."
+        description="Keepstep: rehearse SQLite migrations on disposable copies with declared application scenarios."
     )
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)

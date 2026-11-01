@@ -1,18 +1,29 @@
-# SchemaRehearsal
+# Keepstep
 
 **Find application behavior changes that a successful SQLite migration can hide.**
 
-A table rebuild can preserve every row and pass database integrity checks while dropping an audit trigger or breaking search maintenance. SchemaRehearsal runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
+Run the same declared workload on independent before/after copies, then inspect what changed. Keepstep never applies a migration to your selected source database.
 
-![Actual search report: an update succeeds on both copies, but the updated article returns one search hit before migration and zero after it.](docs/search-report.png)
+[Try without installing](#try-it-without-installing) · [What a result means](#what-the-result-means) · [Use in CI](docs/continuous-integration.md)
 
-The [full-text search walkthrough](docs/full-text-search.md) reproduces this report with synthetic data. Audit, transaction and checkpoint examples are included too.
+[![Actual Keepstep search report: an update succeeds on both copies, but the updated article returns one search hit before migration and zero after it.](docs/keepstep-search-report.jpg)](docs/keepstep-search-report.jpg)
 
-[Try without installing](#try-it-without-installing) · [Use in CI](docs/continuous-integration.md) · [What a result means](#what-the-result-means)
-
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab)](pyproject.toml) [![SQLite · local copies](https://img.shields.io/badge/SQLite-local_copies-4a36b7)](docs/design.md) [![MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
+*The current report, using the included synthetic FTS5 example. Open the image for the full-size witness.*
 
 ## Try it without installing
+
+Use Python 3.11+, Git and a SQLite build with built-in FTS5. Cloning needs network access; the example then runs locally without installation or a database server.
+
+```sh
+git clone https://github.com/nazeeh111/SchemaRehearsal.git
+cd SchemaRehearsal
+python3 examples/quickstart.py --fts5 search-demo
+```
+
+Open `search-demo/broken/report.html`. The wrapper verifies the expected broken, repaired and unchanged synthetic results. Choose a new output directory with an existing parent. This demonstrates the included workload, not your application; general integrity checks do not establish FTS5 index/content consistency.
+
+<details>
+<summary>Audit and search example details</summary>
 
 Python 3.11 or later and Git are enough. This runs the actual engine from the
 source checkout with synthetic data; it needs no package installation, account
@@ -53,7 +64,16 @@ integrity checks do not check FTS5 index/content consistency. See the
 [search walkthrough](docs/full-text-search.md#compare-against-sqlites-own-checks)
 for SQLite's dedicated check and the complete example.
 
-## Install the command
+</details>
+
+<a id="install-the-command"></a>
+<details>
+<summary>Install the command</summary>
+
+The installed command remains `schema-rehearsal`, and Python imports remain
+`schema_rehearsal`; existing suites and scripts keep working.
+
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab)](pyproject.toml) [![SQLite · local copies](https://img.shields.io/badge/SQLite-local_copies-4a36b7)](docs/design.md) [![MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
 No runtime dependencies, network connection or database server are needed after
 installation. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest)
@@ -68,7 +88,11 @@ python -m pip install .
 schema-rehearsal --version
 ```
 
-## Try a migration that loses an audit trail
+</details>
+
+<a id="try-a-migration-that-loses-an-audit-trail"></a>
+<details>
+<summary>Audit-trail example</summary>
 
 ```sh
 schema-rehearsal example example
@@ -89,7 +113,11 @@ checkpoints and retaining a report after failure.
 
 The original synthetic fixture has 20 accounts and 200 orders. Both migrations keep those rows and pass integrity and foreign-key checks. Paying 17 orders produces 17 audit records before migration, **zero** after the broken migration, and 17 after the repaired one. A second scenario checks an exact constraint failure; a third demonstrates that scenarios start independently. No production database is included.
 
-## Catch a regression that a later migration repairs
+</details>
+
+<a id="catch-a-regression-that-a-later-migration-repairs"></a>
+<details>
+<summary>Check an ordered migration sequence</summary>
 
 A final-state check can match while an earlier migration checkpoint breaks a
 workflow. `sequence` applies explicitly ordered migrations on a single cumulative
@@ -123,7 +151,13 @@ disabled must explicitly disable them. The same workloads must be valid against
 the starting schema and relevant checkpoints. New application versions,
 concurrent deployments and migration-runner bookkeeping are not modeled.
 
-## Keep search working after a migration
+</details>
+
+<a id="keep-search-working-after-a-migration"></a>
+<details>
+<summary>Search maintenance and FTS5</summary>
+
+The [full-text search walkthrough](docs/full-text-search.md) reproduces this report with synthetic data. Audit, transaction and checkpoint examples are included too.
 
 Built-in SQLite FTS5 support is explicit: use `--allow-fts5` with `check` or
 `sequence`. Declared writes exercise index maintenance; read-only `MATCH`
@@ -145,7 +179,11 @@ already detects index/content mismatch. This extension adds existing rehearsal
 orchestration and declared search comparisons; general database checks are not
 an FTS5 consistency certification. Other virtual-table modules remain refused.
 
-## Describe the behavior you depend on
+</details>
+
+<a id="describe-the-behavior-you-depend-on"></a>
+<details>
+<summary>Write a workload suite</summary>
 
 The [runnable walkthrough](docs/walkthrough.md) demonstrates how to ignore row
 order without missing changed duplicates, then shows how to extend a workload.
@@ -178,7 +216,13 @@ The migration file supports multiple statements, quoted semicolons, trigger bodi
 
 Scenario SQL cannot control transactions, use savepoints or modify schema. Observations cannot mutate the database. Every scenario starts from fresh copies, not the preceding scenario's result.
 
-## What the result means
+</details>
+
+<a id="what-the-result-means"></a>
+<details>
+<summary>What the result means</summary>
+
+A table rebuild can preserve every row and pass database integrity checks while dropping an audit trigger or breaking search maintenance. Keepstep runs your declared workloads on independent before/after copies and reports what changed. It never applies a migration to your selected source database.
 
 | Exit | Status | Meaning |
 | --- | --- | --- |
@@ -193,7 +237,11 @@ A changed scalar observation can show one row before and after: its hidden cell 
 
 This tool tests declared behaviors, not all possible application behavior. It does not generate or apply production migrations, certify migration safety, measure production performance, or model concurrent application writers.
 
-## Boundaries
+</details>
+
+<a id="boundaries"></a>
+<details>
+<summary>Input and execution boundaries</summary>
 
 The source opens with SQLite `mode=ro`. SQLite's backup API captures committed WAL data into a private in-memory snapshot; simply copying the main database file would miss it. SQL writes run only on copies. SQLite may create or update coordination sidecars such as `-shm`, and another writer may change the source concurrently. We do not promise that the whole source directory stays byte-for-byte identical. Use a selected database you are permitted to read, and retain your normal backups.
 
@@ -201,7 +249,11 @@ Default limits: 64 MiB per database copy and source sidecar, 1 MiB per input fil
 
 External attachment, extension loading, virtual tables by default, explicit TEMP objects, file-writing SQL, unsafe pragmas and common time/random functions are blocked. Migrations may set only `foreign_keys`, `defer_foreign_keys` and `user_version`; selected metadata pragmas are readable. Foreign-key enforcement and recursive triggers are enabled for scenarios. Only built-in FTS5 is available with explicit opt-in; your SQLite build must include it. Custom collations/functions, encrypted databases and other virtual-table modules are unsupported. A workload requiring blocked date/time functions needs fixed values supplied as parameters. See [design and tradeoffs](docs/design.md).
 
-## Development
+</details>
+
+<a id="development"></a>
+<details>
+<summary>Development and verification</summary>
 
 ```sh
 PYTHONPATH=src python -m unittest discover -s tests -v
@@ -209,5 +261,7 @@ python -m compileall -q src
 ```
 
 CI is configured to run tests on Linux with Python 3.11 and 3.14, build a wheel and run the installed CLI outside the source tree. See [verification](docs/verification.md) for actual recorded results and remaining limits.
+
+</details>
 
 Original software under the [MIT license](LICENSE). Migration testing is an established technique; this project focuses on a small, local SQLite workflow and explicit behavioral evidence.
