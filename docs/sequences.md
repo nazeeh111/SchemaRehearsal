@@ -4,7 +4,7 @@ This example uses synthetic orders and payments. It runs the production CLI,
 including the ordinary final-only comparison and the sequence command. No
 private database or network service is needed.
 
-After installing SchemaRehearsal, run this script from a source checkout or release
+After installing Keepstep, run this script from a source checkout or release
 source archive. Choose a new destination whose parent already exists:
 
 ```sh
@@ -79,7 +79,7 @@ application versions, and hashes do not anonymize input data.
 Migration testing is established. [Atlas](https://atlasgo.io/guides/testing/triggers)
 tests triggers and schema behavior with a broader migration workflow.
 [SQLite's sqldiff](https://sqlite.org/sqldiff.html) compares database contents; it
-does not currently display trigger or view differences. SchemaRehearsal focuses on
+does not currently display trigger or view differences. Keepstep focuses on
 replaying selected application workloads on copies and showing each checkpoint's
 comparison with a fixed starting state. It does not generate or deploy migrations.
 
@@ -97,7 +97,7 @@ with the same account and request ID cannot publish it again. The fixture and SQ
 are synthetic. They do not reproduce or validate
 Turnfeed's schema, implementation, or deployment.
 
-With SchemaRehearsal installed, choose a new destination with an existing parent:
+With Keepstep installed, choose a new destination with an existing parent:
 
 ```sh
 python examples/publication_receipts.py /tmp/publication-receipts-demo
@@ -134,7 +134,7 @@ sequence returns 1, identifies checkpoint 2 as the first change, and reports
 the comparisons; its row counts and hashes omit the raw receipt values.
 
 The retained recovery table is explicitly created at checkpoint 1 and used by
-checkpoint 3. SchemaRehearsal does not recover a discarded receipt from deleted
+checkpoint 3. Keepstep does not recover a discarded receipt from deleted
 content or generate a repair. A real recovery source would need its own retention
 and consistency guarantees. This example checks one sequential database contract,
 not application retry code, concurrent requests, network delivery, or crash

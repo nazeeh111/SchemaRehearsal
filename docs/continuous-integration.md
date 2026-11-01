@@ -1,12 +1,12 @@
 # Check a SQLite migration in CI
 
-Use SchemaRehearsal as a check before a deployment. Keep a small synthetic
+Use Keepstep as a check before a deployment. Keep a small synthetic
 database, a migration SQL file and a behavior suite in your application repository.
 The suite should exercise your application's important writes and observations.
 Start with the [audit example](../README.md#try-it-without-installing), then replace
 its synthetic scenarios with your own.
 
-Install a reviewed SchemaRehearsal wheel in your CI environment, or check out a
+Install a reviewed Keepstep wheel in your CI environment, or check out a
 reviewed source revision and install it. The release wheel has no runtime
 dependencies. Record the exact artifact and its hash with your build inputs.
 The commands below assume the installed `schema-rehearsal` command is available.
@@ -65,7 +65,7 @@ the whole workspace are unnecessary report artifacts.
 
 ## Reproduce the setup locally
 
-From the SchemaRehearsal source checkout, this creates only synthetic inputs and
+From the Keepstep source checkout, this creates only synthetic inputs and
 checks the expected broken/repaired/unchanged results:
 
 ```sh
