@@ -1,0 +1,23 @@
+{
+  "format": "schema-rehearsal/v1",
+  "scenarios": [
+    {
+      "name": "Existing child relationships survive",
+      "steps": [],
+      "observations": [
+        {
+          "name": "Child identities and parent links",
+          "sql": "SELECT id,parent_id FROM children ORDER BY id"
+        },
+        {
+          "name": "Parent identities",
+          "sql": "SELECT id FROM parents ORDER BY id"
+        },
+        {
+          "name": "Unrelated row",
+          "sql": "SELECT id FROM a_first ORDER BY id"
+        }
+      ]
+    }
+  ]
+}
