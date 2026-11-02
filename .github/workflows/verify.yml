@@ -26,6 +26,8 @@ jobs:
         run: python examples/quickstart.py "$RUNNER_TEMP/first-run-demo"
       - name: Verify uninstalled search example
         run: python examples/quickstart.py --fts5 "$RUNNER_TEMP/first-run-search-demo"
+      - name: Verify reported table-rebuild example
+        run: python examples/drizzle-table-rebuild/run.py "$RUNNER_TEMP/drizzle-table-demo"
       - name: Build wheel
         run: python -m pip wheel --no-deps --wheel-dir dist .
       - name: Install and verify outside source tree

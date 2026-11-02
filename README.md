@@ -10,6 +10,8 @@ Run the same declared workload on independent before/after copies, then inspect 
 
 *The current report, using the included synthetic FTS5 example. [Inspect the HTML report and its repaired and unchanged controls](https://nazeeh111.github.io/SchemaRehearsal/), or open the image for the full-size witness. The hosted reports are recorded examples.*
 
+[Try a reported Drizzle table rebuild](examples/drizzle-table-rebuild/README.md): three child rows disappear while SQLite checks pass; compare the old, corrected and unchanged results.
+
 ## Try it without installing
 
 Use Python 3.11+, Git and a SQLite build with built-in FTS5. Cloning needs network access; the example then runs locally without installation or a database server.
