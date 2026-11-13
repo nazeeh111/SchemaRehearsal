@@ -85,7 +85,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 ```
 
-Install the downloaded wheel from the [release page](https://github.com/nazeeh111/SchemaRehearsal/releases/latest) without network access:
+Download the wheel from the [release page](https://github.com/nazeeh111/SchemaRehearsal/releases/latest). From the directory containing the wheel, install it without network access:
 
 ```sh
 python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl
