@@ -78,17 +78,26 @@ The installed command remains `schema-rehearsal`, and Python imports remain
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab)](pyproject.toml) [![SQLite · local copies](https://img.shields.io/badge/SQLite-local_copies-4a36b7)](docs/design.md) [![MIT](https://img.shields.io/badge/license-MIT-555)](LICENSE)
 
 No runtime dependencies, network connection or database server are needed after
-installation. The [release](https://github.com/nazeeh111/SchemaRehearsal/releases/latest)
-includes a wheel for offline installation with
-`python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl`.
-Or, from the cloned source checkout above:
+installation. First create and activate a virtual environment:
 
 ```sh
-python -m venv .venv
+python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install .
-schema-rehearsal --version
 ```
+
+Download the wheel from the [release page](https://github.com/nazeeh111/SchemaRehearsal/releases/latest). From the directory containing the wheel, install it without network access:
+
+```sh
+python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl
+```
+
+Or install from the cloned source checkout above:
+
+```sh
+python -m pip install .
+```
+
+Check the installed command with `schema-rehearsal --version`.
 
 </details>
 
