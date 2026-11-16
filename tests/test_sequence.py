@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -201,7 +202,7 @@ class SequenceTests(unittest.TestCase):
         )
 
     def test_partial_change_is_retained_when_later_scenario_errors(self):
-        with sqlite3.connect(self.database) as db:
+        with closing(sqlite3.connect(self.database)) as db, db:
             db.executescript(
                 "CREATE TABLE t(x); INSERT INTO t VALUES(1); CREATE TABLE u(y); INSERT INTO u VALUES(10);"
             )
@@ -228,7 +229,7 @@ class SequenceTests(unittest.TestCase):
         self.assertEqual(report["final_status"], "not_run")
 
     def test_invalid_baseline_preserves_single_migration_identity(self):
-        with sqlite3.connect(self.database) as db:
+        with closing(sqlite3.connect(self.database)) as db, db:
             db.executescript(
                 "CREATE TABLE invalid(parent REFERENCES accounts(id)); INSERT INTO invalid VALUES(999);"
             )

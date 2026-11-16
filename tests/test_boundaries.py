@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from schema_rehearsal.engine import Limits, rehearse
@@ -128,14 +129,14 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual(self.run_case(migration, case)["exit_code"], 1)
 
     def test_invalid_baseline_foreign_keys(self):
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             db.execute("UPDATE orders SET account_id=999 WHERE id=1")
         result = self.run_case()
         self.assertEqual(result["exit_code"], 3)
         self.assertFalse(result["database_checks"]["before"]["foreign_keys_ok"])
 
     def test_observations_preserve_type_duplicate_multiplicity_and_order(self):
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             db.execute("CREATE TABLE values_table(value)")
             db.executemany("INSERT INTO values_table VALUES(?)", [(1,), (1,), (2,)])
         # Same printable cell, distinct SQLite type.

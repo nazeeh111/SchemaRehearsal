@@ -54,18 +54,21 @@ def main(argv=None):
             "Check each ordered migration checkpoint against one starting snapshot.",
         ),
     ]:
-        check = sub.add_parser(command, help=help_text)
+        check = sub.add_parser(command, help=help_text, description=help_text + " Inputs are read from local files; reports omit result cells and SQL. Exit 0 means declared observations match, 1 means a difference, 2 means refusal or execution error, and 3 means an invalid baseline.")
         check.add_argument(
             "--allow-fts5",
             action="store_true",
             help="Allow only built-in FTS5 virtual tables.",
         )
-        for name in ("database", "suite", "output"):
-            check.add_argument("--" + name, required=True, type=Path)
+        for name, detail in (("database", "Source SQLite database; opened read-only and copied"),
+                             ("suite", "Declared scenario suite JSON"),
+                             ("output", "New report directory; existing paths are refused")):
+            check.add_argument("--" + name, required=True, type=Path, help=detail)
         check.add_argument(
             "--migration",
             required=True,
             type=Path,
+            help="Migration SQL file" + ("; repeat in execution order (up to 8)" if command == "sequence" else ""),
             **({"action": "append"} if command == "sequence" else {}),
         )
     args = parser.parse_args(argv)

@@ -22,7 +22,15 @@ cd SchemaRehearsal
 python3 examples/quickstart.py --fts5 search-demo
 ```
 
-Open `search-demo/broken/report.html`. The wrapper verifies the expected broken, repaired and unchanged synthetic results. Choose a new output directory with an existing parent. This demonstrates the included workload, not your application; general integrity checks do not establish FTS5 index/content consistency.
+Open `search-demo/broken/report.html`. The wrapper verifies the expected broken, repaired and unchanged synthetic results:
+
+| Migration | Updated article's search hits, before → after | Rehearsal exit |
+| --- | --- | --- |
+| Broken | 1 → 0 | 1: behavior changed |
+| Repaired | 1 → 1 | 0: declared behavior matched |
+| Unchanged control | 1 → 1 | 0: declared behavior matched |
+
+The wrapper itself exits 0 when it reproduces those expected results, including the intentionally failing broken case. Choose a new output directory with an existing parent. This demonstrates the included workload, not your application; general integrity checks do not establish FTS5 index/content consistency.
 
 <details>
 <summary>Audit and search example details</summary>
@@ -85,13 +93,13 @@ python3 -m venv .venv
 . .venv/bin/activate
 ```
 
-Download the wheel from the [release page](https://github.com/nazeeh111/SchemaRehearsal/releases/latest). From the directory containing the wheel, install it without network access:
+The [v0.4.0 release](https://github.com/nazeeh111/SchemaRehearsal/releases/tag/v0.4.0) wheel is a historical snapshot. From the directory containing that wheel, install it without network access:
 
 ```sh
 python -m pip install --no-index --no-deps schema_rehearsal-0.4.0-py3-none-any.whl
 ```
 
-Or install from the cloned source checkout above:
+The current source identifies itself as `0.4.1.dev0`; install it from the cloned checkout above:
 
 ```sh
 python -m pip install .
