@@ -1,0 +1,29 @@
+{
+  "source_commit": "1f0c4243615762a5111271b64640285a5229b9b8",
+  "source_tree": "e71884695e541a2a7b3d5e57d5a4e42e483b258b",
+  "encoding": "Actual owned SQLite fixture child links, retained generated SQL, native old/corrected/unchanged reports and explicit autocommit trace. FK state at DROP explains 3-to0 vs3-to3 while only the declared integrity/FK checks pass. Not a production migration or new ORM generation.",
+  "files": {
+    "README.md": "b464dc493bb102be1afe1b82df157595634c0821a2cec7dfe919f2f4315342e7",
+    "before.sqlite": "83c191f284d89858d739d8524e66048b451eb35c62690a94e093476aa324e79f",
+    "browser.json": "f413b5b7e7a7c62e2cc7a2584e2f44a9cb2538523b7a8318eaa4d19471c289c5",
+    "children-mobile.png": "fcf565c3fa56135ff693e63c7f85b5913d5656e8ceb1d57895c1613e26b1aaf7",
+    "children-mobile.svg": "a83a7e04c3977568ea620be52e80e4a23954db9c5b604ce9587d279c5bbb7990",
+    "children.png": "c0b33b48ee3d99716b4e48bb0ddce98f721cf7f87e93d618ffe59ee69428f53f",
+    "children.svg": "309504c19bf436352b1a8dabbf68d7eb364e6a2f5d6293bec41f93139fb92b7c",
+    "figure-data.json": "a360a17472f4f8e3cbce3068a4dda61361f3363f2df171b54cd276d2ff963f8d",
+    "figure.py": "a24397cc6c0373c5465d885bdb37cb4128f12e0b3e0a829e05c8faabade90bed",
+    "fixed-report-desktop.png": "cc0026ebef4cdd8f4e04be5f84b7257bf63391f2e1416d50c10c72eb7ef76be1",
+    "old-report-desktop.png": "c72fa8ea62f671d7584d4ee953a81514914e488a4af2c79db80e0799ab9b0b0d",
+    "records/fixed/report.html": "e850fe9f6e0f13a57fcd2d1bc2438370a7f28fafc3bcee225edab9d454885b39",
+    "records/fixed/report.json": "f3c2d120ac56c2f35a67016f61a55c07e2cd30bca5fbb6ccb5b4b7e9b2793700",
+    "records/old/report.html": "239f0970f3a3e8069fe8b8023dccbefba7e71b4dde9d8e6fd5245733c3e422b9",
+    "records/old/report.json": "e84358269cba908838b299d617aa508314996ec036c7724880b6e91afeb3d951",
+    "records/unchanged/report.html": "a58b9e2e7fc92f2b00ec55ce90330b584aa5a0447bfd1cf8250a5c268c5dcc25",
+    "records/unchanged/report.json": "06d302d28bc38ae6f5581e2d3a40f6aee93390f719d31482d99a6ba0d484b034",
+    "report-phone-after.png": "1666eaf53f0c29f0c5ec6dfe25d35c5f2935a5da7d124b69d8133df62df19823",
+    "report-phone-before.png": "4b7b3f08457c9ac730d9e7bd7b7caae261e0c7fcee69cbd65f293cb0c4b47156",
+    "sqlite-trace.json": "54d5e0f6c58d74f1016cf9b8ec5bb5c728a7a2a7cd8412d86fcc19156f7f1e74",
+    "summary.json": "a71b5da739ff056884f8a9a937542e8d0b159b5058705d008540abb05bb05b2f",
+    "worked-example.zip": "ae94f14b5b8401922f5c746ee2d57d25b93f3330cf9fcb07f64f1c7ea2c85bb4"
+  }
+}

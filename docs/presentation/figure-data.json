@@ -1,0 +1,185 @@
+{
+  "source": "Original retained generated SQL and newly executed native reports; owned synthetic rows only",
+  "childrenBefore": [
+    [
+      1,
+      1
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      2
+    ]
+  ],
+  "oldDrop": {
+    "statement": "DROP TABLE `parents`",
+    "foreignKeys": 1,
+    "childRows": []
+  },
+  "fixedDrop": {
+    "statement": "DROP TABLE `parents`",
+    "foreignKeys": 0,
+    "childRows": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        2
+      ]
+    ]
+  },
+  "cases": {
+    "old": {
+      "exit": 1,
+      "status": "changed",
+      "database_checks": {
+        "before": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        },
+        "after": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        }
+      },
+      "local_rows": {
+        "children": [],
+        "parents": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "unrelated": [
+          [
+            1
+          ]
+        ],
+        "integrity_check": [
+          [
+            "ok"
+          ]
+        ],
+        "foreign_key_check": []
+      }
+    },
+    "fixed": {
+      "exit": 0,
+      "status": "matched",
+      "database_checks": {
+        "before": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        },
+        "after": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        }
+      },
+      "local_rows": {
+        "children": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "parents": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "unrelated": [
+          [
+            1
+          ]
+        ],
+        "integrity_check": [
+          [
+            "ok"
+          ]
+        ],
+        "foreign_key_check": []
+      }
+    },
+    "unchanged": {
+      "exit": 0,
+      "status": "matched",
+      "database_checks": {
+        "before": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        },
+        "after": {
+          "integrity_ok": true,
+          "foreign_keys_ok": true
+        }
+      },
+      "local_rows": {
+        "children": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "parents": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "unrelated": [
+          [
+            1
+          ]
+        ],
+        "integrity_check": [
+          [
+            "ok"
+          ]
+        ],
+        "foreign_key_check": []
+      }
+    }
+  },
+  "inputs": {
+    "initial.sql": "68e1c496368c6615f3359e005b5fd03b8c18093f3e4d4d8a2aa6ccbc34f31efa",
+    "seed.sql": "47a7febc55562f9b96621748bb5f4b43c48d55a3c3dd4d7249e6b3bfffc71a50",
+    "old.sql": "b9e6482ace8f8eceecb992c458e92567babcd7aa0d121acc2ac28d48ebeaef7c",
+    "fixed.sql": "1e5d04318c8b0948fa577ec53e5b1d4ee6c55e8a8b22f28bea5ae12e358232e4",
+    "unchanged.sql": "c82cd705bd4083b5d81c244136d3499b1674ad279a6b8315a7613dc54bcb72be",
+    "suite.json": "b65f849297a9f774fb5d43e84c7146b65d49fff28d9f81ec27ea52a2b063dbf2"
+  },
+  "sqlite": "3.50.4"
+}
