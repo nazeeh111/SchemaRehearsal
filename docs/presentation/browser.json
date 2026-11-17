@@ -1,0 +1,25 @@
+{
+  "desktop": [
+    1440,
+    1000
+  ],
+  "mobile": {
+    "width": 375,
+    "isMobile": true,
+    "layout": 375,
+    "noPageOverflow": true,
+    "nativeTableScroll": {
+      "before": 0,
+      "after": 283
+    }
+  },
+  "actualReportStates": {
+    "old": "changed",
+    "fixed": "matched"
+  },
+  "keyboardDetailsEnter": true,
+  "keyboardTableArrowRight": true,
+  "freshHTMLReopen": true,
+  "externalRequests": [],
+  "errors": []
+}

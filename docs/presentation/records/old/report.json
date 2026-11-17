@@ -1,0 +1,68 @@
+{
+  "format": "schema-rehearsal/report-v1",
+  "sqlite_version": "3.50.4",
+  "fts5_enabled": false,
+  "status": "changed",
+  "exit_code": 1,
+  "database_checks": {
+    "before": {
+      "integrity_ok": true,
+      "foreign_keys_ok": true
+    },
+    "after": {
+      "integrity_ok": true,
+      "foreign_keys_ok": true
+    }
+  },
+  "schema_changes": [
+    {
+      "type": "table",
+      "name": "a_first",
+      "change": "changed"
+    },
+    {
+      "type": "table",
+      "name": "parents",
+      "change": "changed"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "Existing child relationships survive",
+      "steps": [],
+      "observations": [
+        {
+          "name": "Child identities and parent links",
+          "order": "ordered",
+          "equal": false,
+          "before_rows": 3,
+          "after_rows": 0,
+          "before_columns": 2,
+          "after_columns": 2
+        },
+        {
+          "name": "Parent identities",
+          "order": "ordered",
+          "equal": true,
+          "before_rows": 2,
+          "after_rows": 2,
+          "before_columns": 1,
+          "after_columns": 1
+        },
+        {
+          "name": "Unrelated row",
+          "order": "ordered",
+          "equal": true,
+          "before_rows": 1,
+          "after_rows": 1,
+          "before_columns": 1,
+          "after_columns": 1
+        }
+      ],
+      "status": "changed"
+    }
+  ],
+  "migration_sha256": "b9e6482ace8f8eceecb992c458e92567babcd7aa0d121acc2ac28d48ebeaef7c",
+  "suite_sha256": "20ee0a6adc6908345cc4bcab6cd209cdaf5916b7b42facc7d74bbd464bfdf766",
+  "snapshot_sha256": "adb5f27485271804530d8d55cb5b5771727a27eff09678d47f19e8b7638bad8c"
+}

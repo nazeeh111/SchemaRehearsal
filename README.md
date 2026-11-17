@@ -1,16 +1,16 @@
 # Keepstep
 
-**Find application behavior changes that a successful SQLite migration can hide.**
+**A migration can pass SQLite checks and still erase the rows your app needs.** Keepstep runs the same declared workload on independent before/after copies and reports changed values, types and outcomes. It never applies the migration to the selected source database.
 
-Run the same declared workload on independent before/after copies, then inspect what changed. Keepstep never applies a migration to your selected source database.
+In the worked table rebuild, **both parent IDs remain while three child rows disappear**. Integrity and foreign-key checks still pass. Keepstep's exact relationship observation catches the loss; corrected and unchanged controls retain the children.
 
-[Inspect a recorded search report](https://nazeeh111.github.io/SchemaRehearsal/) · [Run without installing](#try-it-without-installing) · [What a result means](#what-the-result-means) · [Use in CI](docs/continuous-integration.md)
+<picture><source media="(max-width: 600px)" srcset="docs/presentation/children-mobile.svg"><img src="docs/presentation/children.svg" alt="Actual synthetic child-parent links and the retained migration's cascade-delete mechanism, with CLI outcomes 1/0/0 despite passing SQLite general checks." width="100%"></picture>
 
-[![Actual Keepstep search report: an update succeeds on both copies, but the updated article returns one search hit before migration and zero after it.](docs/keepstep-search-report.jpg)](docs/keepstep-search-report.jpg)
+[Follow the exact case](docs/presentation/README.md) · [Download its complete replay](docs/presentation/worked-example.zip) · [Open the changed report](docs/presentation/records/old/report.html) · [Run this case without installing](docs/presentation/README.md#run-the-real-comparison)
 
-*The current report, using the included synthetic FTS5 example. [Inspect the HTML report and its repaired and unchanged controls](https://nazeeh111.github.io/SchemaRehearsal/), or open the image for the full-size witness. The hosted reports are recorded examples.*
+<img src="docs/presentation/old-report-desktop.png" alt="Actual current Keepstep report: child relationships change from 3 rows to 0 while the two control observations and SQLite checks pass." width="100%">
 
-[Try a reported Drizzle table rebuild](examples/drizzle-table-rebuild/README.md): three child rows disappear while SQLite checks pass; compare the old, corrected and unchanged results.
+*Only the declared workload is checked. The example replays retained generated SQL directly on an owned synthetic SQLite fixture, not a deployment or live application. [Original case, generator versions and reporter credit](examples/drizzle-table-rebuild/README.md). [Recorded search example](https://nazeeh111.github.io/SchemaRehearsal/) · [CI semantics](docs/continuous-integration.md).*
 
 ## Try it without installing
 
@@ -61,7 +61,7 @@ returns 0 when those expected exits are reproduced. `summary.json` records the
 results and generated source database hashes. This is a demonstration, not a
 check of your own application. Choose a new directory to run it again.
 
-To reproduce the search report pictured above, use the same no-install path:
+To run the separate FTS5 search example, use the same no-install path:
 
 ```sh
 python3 examples/quickstart.py --fts5 search-demo
