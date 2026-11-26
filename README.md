@@ -6,7 +6,7 @@ In the worked table rebuild, **both parent IDs remain while three child rows dis
 
 <picture><source media="(max-width: 600px)" srcset="docs/presentation/children-mobile.svg"><img src="docs/presentation/children.svg" alt="Actual synthetic child-parent links and the retained migration's cascade-delete mechanism, with CLI outcomes 1/0/0 despite passing SQLite general checks." width="100%"></picture>
 
-[Follow the exact case](docs/presentation/README.md) · [Download its complete replay](docs/presentation/worked-example.zip) · [Open the changed report](docs/presentation/records/old/report.html) · [Run this case without installing](docs/presentation/README.md#run-the-real-comparison)
+[Follow the exact case](docs/presentation/README.md) · [Download its complete replay](https://raw.githubusercontent.com/nazeeh111/SchemaRehearsal/e24fa0f573d9635887d5c0259fb1c32476449f29/docs/presentation/worked-example.zip) · [Open the changed report](docs/presentation/records/old/report.html) · [Run this case without installing](docs/presentation/README.md#run-the-real-comparison)
 
 <img src="docs/presentation/old-report-desktop.png" alt="Actual current Keepstep report: child relationships change from 3 rows to 0 while the two control observations and SQLite checks pass." width="100%">
 
