@@ -311,7 +311,9 @@ outcome codes. The initial witness is repeated; a changed source snapshot aborts
 without publishing a result. SQL using randomness or time can still make later
 trials unstable, so recheck the reduced suite and inspect it before sharing.
 
-This greedy step-deletion search does not guarantee a globally smallest case.
+The search tries contiguous groups of steps first, then narrows to individual
+steps. This can remove compensating actions together even when either removal
+on its own changes the witness. It can leave other removable groups behind.
 `complete` means single-step removals from the final scenario were exhausted;
 `inconclusive` means invalid or failed trials occurred, and `budget_exhausted`
 means the search stopped early. Both retain the last observed witness and exit

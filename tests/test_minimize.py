@@ -37,6 +37,45 @@ class MinimizationTests(unittest.TestCase):
         self.assertEqual(self.db.read_bytes(), original_bytes)
         self.assertEqual(len(self.suite["scenarios"][0]["steps"]), 17)
 
+    def test_removes_compensating_steps_together(self):
+        with closing(sqlite3.connect(self.db)) as db:
+            db.executescript("CREATE TABLE balance(v INTEGER); INSERT INTO balance VALUES (0);")
+        scenario = self.suite["scenarios"][0]
+        scenario["steps"] = [
+            {"sql": "UPDATE balance SET v = v + 1"},
+            {"sql": "UPDATE balance SET v = v - 1"},
+            {"sql": "INSERT INTO items VALUES (1)"},
+        ]
+        scenario["observations"][0]["sql"] = (
+            "SELECT id, (SELECT v FROM balance) FROM items ORDER BY id"
+        )
+        args = {"scenario": "workflow", "observation": "items"}
+        _, original = _rehearse_for_minimization(self.db, self.migration, self.suite, **args)
+        for index in range(2):
+            candidate = copy.deepcopy(self.suite)
+            del candidate["scenarios"][0]["steps"][index]
+            _, changed = _rehearse_for_minimization(self.db, self.migration, candidate, **args)
+            self.assertNotEqual(changed, original)
+
+        reduced, summary = minimize(self.db, self.migration, self.suite, **args)
+        _, retained = _rehearse_for_minimization(self.db, self.migration, reduced, **args)
+        self.assertEqual(reduced["scenarios"][0]["steps"], scenario["steps"][2:])
+        self.assertEqual(retained, original)
+        self.assertEqual(summary["status"], "complete")
+
+    def test_tight_budget_leaves_room_for_single_step_pass(self):
+        self.suite["scenarios"][0]["steps"] = [
+            {"sql": "INSERT INTO items VALUES (?)", "parameters": [index]}
+            for index in range(1, 9)
+        ]
+        reduced, summary = minimize(
+            self.db, self.migration, self.suite, scenario="workflow",
+            observation="items", max_trials=10,
+        )
+        self.assertEqual(summary["status"], "complete")
+        self.assertEqual(summary["trials"], 10)
+        self.assertEqual(reduced, self.suite)
+
     def test_budget_is_explicit_and_retains_a_valid_witness(self):
         reduced, summary = minimize(self.db, self.migration, self.suite, scenario="workflow",
                                     observation="items", max_trials=3)

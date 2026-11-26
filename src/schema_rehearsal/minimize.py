@@ -1,4 +1,4 @@
-"""Bounded deletion of scenario steps using the public rehearsal contract."""
+"""Bounded deletion of scenario step ranges using the rehearsal contract."""
 
 from copy import deepcopy
 import time
@@ -71,11 +71,22 @@ def minimize(database, migration, suite, *, scenario, observation=None, commit=F
     if repeat[0].get("snapshot_sha256") != snapshot or witness(repeat) != target:
         raise RehearsalError("Source snapshot or reported witness changed on repeat; no result written.")
     original_steps = len(case["steps"])
+    width = original_steps
     index = 0
     stop = "complete"
-    while index < len(case["steps"]):
+    while width:
+        # Leave enough trials for a full single-step pass, when possible.
+        if width > 1 and max_trials - trials <= len(case["steps"]):
+            width = 1
+            index = 0
+        if index >= len(case["steps"]):
+            if width == 1:
+                break
+            # Split the ranges until the final pass tries every single deletion.
+            width = (width + 1) // 2
+            index = 0
         candidate = deepcopy(reduced)
-        del candidate["scenarios"][0]["steps"][index]
+        del candidate["scenarios"][0]["steps"][index:index + width]
         result = run(candidate)
         if result is None:
             stop = "budget_exhausted"
@@ -85,13 +96,13 @@ def minimize(database, migration, suite, *, scenario, observation=None, commit=F
             raise RehearsalError("Source snapshot changed during reduction; no result written.")
         if report["status"] not in ("matched", "changed"):
             inconclusive += 1
-            index += 1
         elif witness(result) == target:
             reduced = candidate
             case = reduced["scenarios"][0]
+            width = min(width, len(case["steps"]))
             index = 0
-        else:
-            index += 1
+            continue
+        index += width
     if stop == "complete" and inconclusive:
         stop = "inconclusive"
     summary = {"format": "schema-rehearsal/minimization-v1", "status": stop,
