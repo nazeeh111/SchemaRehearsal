@@ -284,3 +284,43 @@ CI is configured to run tests on Linux with Python 3.11 and 3.14, build a wheel 
 </details>
 
 Original software under the [MIT license](LICENSE). Migration testing is an established technique; this project focuses on a small, local SQLite workflow and explicit behavioral evidence.
+
+### Reduce a long scenario
+
+`minimize` removes steps from one explicitly selected scenario while repeatedly
+running the same rehearsal:
+
+```sh
+schema-rehearsal minimize --database app.sqlite --migration migration.sql \
+  --suite scenarios.json --scenario 'Create order' --observation 'Orders' \
+  --output reduced-suite.json --max-trials 100 --seconds 60
+schema-rehearsal check --database app.sqlite --migration migration.sql \
+  --suite reduced-suite.json --output reduced-check
+```
+
+Use `--commit` instead of `--observation` for a changed commit outcome. The
+source database is opened read-only by the rehearsal engine; each trial uses
+independent before and after copies. The output must not exist. The suite file
+contains the selected scenario and its SQL and parameters, so treat it as
+sensitive. A value-free JSON summary is printed to standard output.
+
+For observations the reducer compares the exact before and after normalized
+result cells in memory, respecting ordered or multiset semantics. It does not
+write or hash those cells. Commit witnesses retain the exact before and after
+outcome codes. The initial witness is repeated; a changed source snapshot aborts
+without publishing a result. SQL using randomness or time can still make later
+trials unstable, so recheck the reduced suite and inspect it before sharing.
+
+This greedy step-deletion search does not guarantee a globally smallest case.
+`complete` means single-step removals from the final scenario were exhausted;
+`inconclusive` means invalid or failed trials occurred, and `budget_exhausted`
+means the search stopped early. Both retain the last observed witness and exit
+2; `complete` exits 0. The first two rehearsals count toward the trial budget.
+Each trial observes the engine's limits; the remaining time is passed to the
+engine and is not an operating-system hard timeout.
+
+The completed suite is published as an exclusive atomic file link, so a handled
+interruption before publication leaves no output and existing paths are never
+replaced. A crash can leave a temporary file beside the output; it cannot leave
+a partial file at the requested path. An interruption after publication may
+prevent the summary from being printed even though the suite exists.

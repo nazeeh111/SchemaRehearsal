@@ -140,9 +140,10 @@ def render_sequence_html(report):
                 f'{_scenario_sections(child)}<h3>Schema compared with starting snapshot</h3><ul>{schema}</ul>'
             )
         checkpoints.append(
-            f'<details class="checkpoint" id="checkpoint-{_e(number)}" {"open" if state != "matched" else ""}>'
-            f'<summary>Checkpoint {_e(number)} · {_e(state)}</summary>{child_content}'
-            f'<dl class="checkpoint-identity"><dt>Migration SHA-256</dt><dd class="mono">{_e(checkpoint["migration_sha256"])}</dd></dl></details>'
+            f'<details class="checkpoint" {"open" if state != "matched" else ""}>'
+            f'<summary>Checkpoint {_e(number)} · {_e(state)}</summary>'
+            f'<div id="checkpoint-{_e(number)}" class="checkpoint-body">{child_content}'
+            f'<dl class="checkpoint-identity"><dt>Migration SHA-256</dt><dd class="mono">{_e(checkpoint["migration_sha256"])}</dd></dl></div></details>'
         )
     hashes = ''.join(
         f'<dt>{_e(label)}</dt><dd class="mono">{_e(report.get(key) or "Unavailable")}</dd>'
@@ -194,6 +195,16 @@ STYLE = """/* Hallmark-informed evidence sheet; retained Keepstep light report i
 :root{--paper:#fff;--ink:#171923;--muted:#424957;--line:#cdd2df;--accent:#4a36b7;--warning:#9b2737;--changed:#fff3e4;--notice:#f3f0ff;--rule:#e2e5ed;--diagnostic:#fff0f3;--body:system-ui,sans-serif;--mono:ui-monospace,monospace}
 *{box-sizing:border-box}html,body{overflow-x:clip}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--body)}main{max-width:1120px;margin:auto;padding:40px 32px}header{border-top:5px solid var(--ink);padding-top:20px;margin-bottom:28px}.brand{font-size:18px;font-weight:700}h1{font-size:clamp(32px,5vw,58px);line-height:1.08;letter-spacing:-.045em;max-width:900px;margin:24px 0 18px}.lede{max-width:760px;margin:16px 0 0}.result-summary{display:flex;gap:12px 28px;flex-wrap:wrap;margin:0;font-size:18px}.sequence-result{font-size:20px;margin:0;max-width:800px}.scenario{margin:22px 0 30px;border:1px solid var(--line);background:var(--paper)}.scenario-changed{border-left:5px solid var(--warning)}.scenario-heading{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}h2{font-size:22px;margin:0;line-height:1.3}.pill{font-size:16px;font-weight:600}.table-help{display:none}.table-wrap{overflow-x:auto}.table-wrap:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}table{border-collapse:collapse;width:100%;min-width:620px;text-align:left}th,td{padding:16px 22px;border-bottom:1px solid var(--rule);font-size:16px;vertical-align:top}thead th{font-weight:650;font-size:16px;color:var(--ink)}tbody th{font-weight:600;width:37%}small{display:block;color:var(--muted);font-size:16px;font-weight:400;margin-top:3px}.row-count{display:block;font-size:22px;line-height:1.35;white-space:nowrap}.column-count{display:block;font-size:16px;color:var(--muted);white-space:nowrap}.same{color:var(--ink)}.different{color:var(--warning);font-weight:750}.different-row{background:var(--changed)}.step-value{overflow-wrap:anywhere}.support{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:34px;margin:38px 0}.support h2{padding-bottom:12px;border-bottom:1px solid var(--line)}ul{list-style:none;padding:0;margin:12px 0}li{padding:7px 0;overflow-wrap:anywhere}.support li span{display:block}.mono{font:16px/1.6 var(--mono);overflow-wrap:anywhere}details{border-top:1px solid var(--line);padding:20px 0}summary{cursor:pointer;font-size:18px;font-weight:650;scroll-margin-top:20px}details p{max-width:780px}dt{font-size:16px;font-weight:600;margin-top:16px}dd{margin:5px 0}.checkpoint-table{min-width:0}.checkpoint-table th{width:65%}a{color:var(--accent);text-underline-offset:4px}.checkpoint{padding:22px 0}.checkpoint>summary{font-size:22px}.checkpoint-checks{color:var(--muted)}.checkpoint-identity{margin-top:24px}h3{font-size:18px;margin-top:26px}footer{border-top:1px solid var(--line);margin-top:12px;padding-top:18px;font-size:16px}.diagnostic,.notice{padding:14px 20px;margin:24px 0;border-left:4px solid var(--warning);background:var(--diagnostic)}.diagnostic p,.notice p{margin:4px 0;max-width:780px}.notice{border-color:var(--accent);background:var(--notice)}
 @media(max-width:700px){main{padding:24px 16px}.support{grid-template-columns:minmax(0,1fr);gap:22px}.scenario-heading{align-items:flex-start;padding:16px}.table-help{display:block;margin:18px 0;font-size:16px}.result-summary{gap:8px 18px}.scenario-heading h2{font-size:21px}th,td{padding:14px 16px}.checkpoint>summary{font-size:21px}}
+@media screen and (max-width:700px){
+.checkpoint-body{scroll-margin-top:4rem}
+.table-help{display:none}
+.table-wrap table{min-width:0;table-layout:fixed}
+.table-wrap th,.table-wrap td{padding:10px 6px;overflow-wrap:anywhere;font-size:14px}
+.table-wrap thead th:first-child{width:32%}
+.table-wrap thead th:last-child{width:23%}
+.table-wrap .row-count{font-size:17px;white-space:normal}
+.table-wrap .column-count{font-size:13px;white-space:normal}
+}
 @media print{body{background:var(--paper)}main{padding:0}.table-help{display:none}.table-wrap{overflow:visible}table{min-width:0}details{display:block;break-inside:auto}details>*{display:block}details::details-content{display:block;content-visibility:visible}.scenario{break-inside:avoid}h1{font-size:32px}th,td{padding:10px 12px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 """
