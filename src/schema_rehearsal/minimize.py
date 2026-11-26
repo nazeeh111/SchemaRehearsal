@@ -1,6 +1,7 @@
 """Bounded deletion of scenario step ranges using the rehearsal contract."""
 
 from copy import deepcopy
+from dataclasses import replace
 import time
 
 from .engine import Limits, RehearsalError, _rehearse_for_minimization, validate_suite
@@ -40,9 +41,7 @@ def minimize(database, migration, suite, *, scenario, observation=None, commit=F
         if trials >= max_trials or remaining <= 0:
             return None
         trials += 1
-        trial_limits = Limits(database_bytes=limits.database_bytes, input_bytes=limits.input_bytes,
-                              result_bytes=limits.result_bytes, result_rows=limits.result_rows,
-                              seconds=min(limits.seconds, remaining))
+        trial_limits = replace(limits, seconds=min(limits.seconds, remaining))
         return _rehearse_for_minimization(database, migration, candidate, scenario=scenario,
                                           observation=observation, limits=trial_limits,
                                           allow_fts5=allow_fts5)
