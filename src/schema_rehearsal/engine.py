@@ -512,7 +512,8 @@ def _scenario(db, case, limits, deadline, allow_fts5=False):
     return outcomes, observations, commit
 
 
-def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False):
+def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False,
+                    _observation_capture=None):
     """Return a value-free report. Only explicitly selected database files are read."""
     limits = limits or Limits()
     report = {
@@ -726,6 +727,13 @@ def _rehearse_many(database, migrations, suite, *, limits=None, allow_fts5=False
                                 if order == "ordered"
                                 else Counter(a) == Counter(b)
                             )
+                            if (_observation_capture is not None
+                                    and case["name"] == _observation_capture["scenario"]
+                                    and obs["name"] == _observation_capture["observation"]):
+                                _observation_capture["pair"] = (
+                                    cols_a, tuple(a) if order == "ordered" else Counter(a),
+                                    cols_b, tuple(b) if order == "ordered" else Counter(b),
+                                )
                             case_report["observations"].append(
                                 {
                                     "name": obs["name"],
@@ -783,6 +791,15 @@ def rehearse(
     return _rehearse_many(
         database, [migration], suite, limits=limits, allow_fts5=allow_fts5
     )[0]
+
+
+def _rehearse_for_minimization(database, migration, suite, *, scenario, observation,
+                              limits=None, allow_fts5=False):
+    """Return the regular report and one private normalized observation pair."""
+    capture = {"scenario": scenario, "observation": observation}
+    report = _rehearse_many(database, [migration], suite, limits=limits,
+                            allow_fts5=allow_fts5, _observation_capture=capture)[0]
+    return report, capture.get("pair")
 
 
 def rehearse_sequence(

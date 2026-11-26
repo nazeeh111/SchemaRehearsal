@@ -2,12 +2,15 @@
 
 import argparse
 import json
+import os
+import tempfile
 import sys
 from pathlib import Path
 
 from . import __version__
 from .engine import Limits, RehearsalError, rehearse, rehearse_sequence, validate_suite
 from .example import create_example, create_fts5_example
+from .minimize import minimize
 from .report import render_html, render_sequence_html
 
 
@@ -71,6 +74,16 @@ def main(argv=None):
             help="Migration SQL file" + ("; repeat in execution order (up to 8)" if command == "sequence" else ""),
             **({"action": "append"} if command == "sequence" else {}),
         )
+    reduction = sub.add_parser("minimize", help="Reduce steps while preserving a selected reported difference.")
+    for name in ("database", "migration", "suite", "output"):
+        reduction.add_argument("--" + name, required=True, type=Path)
+    reduction.add_argument("--scenario", required=True)
+    selected = reduction.add_mutually_exclusive_group(required=True)
+    selected.add_argument("--observation")
+    selected.add_argument("--commit", action="store_true")
+    reduction.add_argument("--max-trials", type=int, default=100)
+    reduction.add_argument("--seconds", type=float, default=60)
+    reduction.add_argument("--allow-fts5", action="store_true")
     args = parser.parse_args(argv)
     try:
         if args.command == "example":
@@ -119,9 +132,26 @@ def main(argv=None):
             ),
         )
         validate_suite(suite, limits)
+        sequence = args.command == "sequence"
+        if args.command == "minimize":
+            reduced, summary = minimize(args.database, migrations[0], suite,
+                scenario=args.scenario, observation=args.observation, commit=args.commit,
+                max_trials=args.max_trials, seconds=args.seconds, limits=limits,
+                allow_fts5=args.allow_fts5)
+            fd, temporary = tempfile.mkstemp(prefix=".keepstep-", dir=args.output.parent)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as file:
+                    json.dump(reduced, file, indent=2, ensure_ascii=False)
+                    file.write("\n")
+                # A hard link publishes the complete file atomically and fails if
+                # any destination already exists, including a dangling symlink.
+                os.link(temporary, args.output)
+            finally:
+                os.unlink(temporary)
+            print(json.dumps(summary, ensure_ascii=False))
+            return 0 if summary["status"] == "complete" else 2
         # Reserve output before database execution, including races with another invocation.
         args.output.mkdir(parents=False, exist_ok=False)
-        sequence = args.command == "sequence"
         report = (
             rehearse_sequence(
                 args.database,
